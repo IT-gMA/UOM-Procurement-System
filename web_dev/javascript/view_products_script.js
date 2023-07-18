@@ -264,7 +264,7 @@ function process_product_vendor_map(products, vendor_product_maps, cart_items=un
             'num_in_cart': -1,
             'total_price': -1,
         }
-        const vendor_product_map = vendor_product_maps.filter(vendor_product_map => vendor_product_map['_prg_product_value'] === formatted_product.uid)[0];
+        const vendor_product_map = vendor_product_maps.filter(vendor_product_map => vendor_product_map['_prg_product_value'] === formatted_product.uid && vendor_product_map.prg_price > 0)[0];
         if (vendor_product_map === undefined) return;
 
         formatted_product['vendor_uid'] = vendor_product_map['_prg_vendor_value'];
