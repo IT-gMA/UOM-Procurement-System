@@ -592,7 +592,7 @@ $(document).ready(function(){
                     alert('Unable to load your cart at this time');
                     return hide_elems_on_load(true);
                 }
-                CART_CONTAINER_MODAL.find('.modal-footer').toggle(response['responseJSON']['num_items_orderd'] > 0);
+                
                 if (response['responseJSON']['num_items_orderd'] < 1) {
                     CART_CONTAINER_MODAL.find('.modal-title').text("You haven't yet added any product to cart");
                     CART_CONTAINER_MODAL.find('.modal-footer').toggle(false);
@@ -613,7 +613,10 @@ $(document).ready(function(){
                         
                         render_product_cards(formatted_products, modal_content_body.find('.cart-item-container-section'), false);
                         write_cart_modal_header(CART_CONTAINER_MODAL.find('.modal-title'), formatted_products);
-                        CART_CONTAINER_MODAL.find('.modal-footer').toggle(true);
+                        CART_CONTAINER_MODAL.find('.modal-footer').toggle(formatted_products.length > 0);
+
+                        CART_BUTTON.attr('data-quantity', formatted_products.length);
+                        CART_BUTTON.find('[name=cart-item-num]').eq(0).text(formatted_products.length);
                     }
                     $.ajax({
                         type: 'POST',
@@ -745,6 +748,9 @@ $(document).ready(function(){
     });
 
     APPLY_FILTER_BTN.on('click', function(event){
+        disable_button(CLEAR_FILTER_BTN, true);
+        disable_button(APPLY_FILTER_BTN, true, BSTR_BORDER_SPINNER);
+
         const filtered_vendors = get_selected_filter_values(`${VENDOR_FILTER_DROPDOWN.attr('name')}-checkbox`);
         const filtered_subcategories = get_selected_filter_values(`${SUBCATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
         const filtered_brands = get_selected_filter_values(`${BRAND_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
@@ -758,10 +764,16 @@ $(document).ready(function(){
                         );
         });
         sort_product($('input[name=sort-option-radio-checkbox]:checked'));
+
+        disable_button(CLEAR_FILTER_BTN, false);
+        disable_button(APPLY_FILTER_BTN, true, 'Apply Filters');
     });
 
 
     CLEAR_FILTER_BTN.on('click', function(event){
+        disable_button(CLEAR_FILTER_BTN, true, BSTR_BORDER_SPINNER);
+        disable_button(APPLY_FILTER_BTN, true);
+
         $(document).find('.product-card').each(function(){
             $(this).toggle(true);
         });
@@ -770,5 +782,7 @@ $(document).ready(function(){
         $('input[name=product-search-input-field]').val(null);
         $(document).find('.form-check-input').prop('checked', false);
         $(document).find('.form-check-input').attr('checked', false);
+
+        disable_button(CLEAR_FILTER_BTN, true, 'Clear Filters');
     });
 });

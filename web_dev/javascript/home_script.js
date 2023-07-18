@@ -573,7 +573,7 @@ $(document).ready(function(){
                     alert('Unable to load your cart at this time');
                     return hide_elems_on_load(true);
                 }
-                CART_CONTAINER_MODAL.find('.modal-footer').toggle(response['responseJSON']['num_items_orderd'] > 0);
+                
                 if (response['responseJSON']['num_items_orderd'] < 1) {
                     CART_CONTAINER_MODAL.find('.modal-title').text("You haven't yet added any product to cart");
                     CART_CONTAINER_MODAL.find('.modal-footer').toggle(false);
@@ -594,7 +594,10 @@ $(document).ready(function(){
                         
                         render_product_cards(formatted_products, modal_content_body.find('.cart-item-container-section'), false);
                         write_cart_modal_header(CART_CONTAINER_MODAL.find('.modal-title'), formatted_products);
-                        CART_CONTAINER_MODAL.find('.modal-footer').toggle(true);
+                        CART_CONTAINER_MODAL.find('.modal-footer').toggle(formatted_products.length > 0);
+
+                        CART_BUTTON.attr('data-quantity', formatted_products.length);
+                        CART_BUTTON.find('[name=cart-item-num]').eq(0).text(formatted_products.length);
                     }
                     $.ajax({
                         type: 'POST',
