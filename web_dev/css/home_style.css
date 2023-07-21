@@ -43,6 +43,7 @@ a .fa-solid, .location-name-txt-container .material-symbols-rounded,
 }
 
 #navbarDropdown{
+    text-align: center !important;
     font-size: 1.5em !important;
 }
 
@@ -163,14 +164,17 @@ body{
     grid-gap: 1em !important;
 }
 
+.grid-body-content-section.one-grid{
+    grid-template-columns: repeat(1, 1fr) !important;
+}
 .grid-body-content-section.two-grid{
-    grid-template-columns: 1fr 1fr !important;
+    grid-template-columns: repeat(2, 1fr) !important;
 }
 .grid-body-content-section.three-grid{
-    grid-template-columns: 1fr 1fr 1fr !important;
+    grid-template-columns: repeat(3, 1fr) !important;
 }
 .grid-body-content-section.four-grid{
-    grid-template-columns: 1fr 1fr 1fr 1fr !important;
+    grid-template-columns: repeat(4, 1fr) !important;
 }
 
 .grid-body-content-section, .product-container-section, .cart-item-container-section{
@@ -187,7 +191,8 @@ body{
 }
 
 .search-bar-container, .card-container, .btn.btn-primary, .product-quantity-input-field, 
-.cart-btn-container button, .cart-btn-container h6, .progress, .filter-container, .dropdown-menu{
+.cart-btn-container button, .cart-btn-container h6, .progress, .filter-container, .dropdown-menu,
+.overflow-scroll.content-table-element, .stat-item-container, form input, form textarea{
     border: var(--border-charcoal-solid) !important;
     border-width: .25em !important;
 }
@@ -195,7 +200,8 @@ body{
 .search-bar-container:hover, .product-quantity-input-field:hover
 .search-bar-container:active, .product-quantity-input-field:active
 .search-bar-container:focus, .product-quantity-input-field:hover,
-.filter-container, .filter-container:hover, .filter-container:focus, .filter-container:active{
+.filter-container, .filter-container:hover, .filter-container:focus, .filter-container:active,
+form input:hover, form textarea:hover, form input:hover, form textarea:hover, form input:active, form textarea:active{
     border-width: .25em !important;
 }
 
@@ -208,7 +214,8 @@ body{
     background-color: var(--clr-off-white-primary);
 }
 
-.thumbnail-img-container, .text-container, .thumbnail-img-container img, .product-description-container{
+.thumbnail-img-container, .text-container, .thumbnail-img-container img, .product-description-container,
+.overflow-scroll{
     position: relative !important;
 }
 
@@ -221,16 +228,22 @@ body{
     overflow: hidden !important;
 }
 
-.card-container .thumbnail-img-container img{
+.card-container .thumbnail-img-container img, 
+.overflow-scroll.content-table-element .data-row td .image-container img{
     aspect-ratio: 1/1 !important;
     max-width: 100%;
     transition: .5s ease-in-out !important;
+
+    height: auto !important;
 }
 
-.card-container:hover > .thumbnail-img-container img{
+.card-container:hover > .thumbnail-img-container img,
+.overflow-scroll.content-table-element .data-row td .image-container:hover > img{
     transform: scale(1.1) !important;
 }
-.card-container:active > .thumbnail-img-container img{
+.card-container:active > .thumbnail-img-container img,
+.overflow-scroll.content-table-element .data-row td .image-container:active > img,
+.overflow-scroll.content-table-element .data-row td .image-container:focus > img{
     transform: scale(1.2) !important;
 }
 
@@ -366,7 +379,8 @@ body{
     box-shadow: none !important;
 }
 
-.search-text-field:active, .search-text-field:focus, .product-quantity-input-field:active, .product-quantity-input-field:focus{
+.search-text-field:active, .search-text-field:focus, .product-quantity-input-field:active, .product-quantity-input-field:focus,
+form input, form textarea, form input:hover, form textarea:hover, form input:active, form textarea:active, form input:focus, form textarea:focus{
     outline: none !important;
 }
 /*End of search field styling*/
@@ -629,6 +643,120 @@ body{
 /*End of update cart button styling*/
 /*End of Cart Container Body Styling*/
 
+/*Order History content section styling*/
+.order-history-content-section, .stat-content-container{
+    display: flex;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+.order-history-content-section{
+    margin: 2em !important;
+}
+  
+.order-history-content-container{
+    max-width: 1400px !important;
+    width: 100% !important;
+
+    overflow: scroll !important;
+}
+/*End of Order History content section styling*/
+
+
+/*Overflow table styling*/
+.overflow-scroll{
+    overflow: scroll !important;
+    width: 100% !important;
+}
+
+.overflow-scroll.content-table-element{
+    cursor: pointer !important;
+    color: var(--clr-programmed-charcoal-400) !important;
+    max-height: clamp(70em, 60vh, 800px) !important;
+
+    border-radius: 1.25em !important;
+
+    font-size: .9em !important;
+}
+
+.sticky-top{
+    background-color: var(--clr-green-primary-200) !important;
+    border-bottom: var(--border-charcoal-solid) !important;
+}
+
+tr td, tr th{
+    vertical-align: middle !important;
+}
+
+.overflow-scroll.content-table-element .data-row td .image-container{
+    overflow: hidden !important;
+    border: var(--border-charcoal-solid) !important; 
+
+    width: 3em !important;
+    height: 3em !important;
+}
+
+.overflow-scroll.content-table-element .data-row td .image-container,
+.overflow-scroll.content-table-element .data-row td .image-container:hover,
+.overflow-scroll.content-table-element .data-row td .image-container:active,
+.overflow-scroll.content-table-element .data-row td .image-container:focus{
+    border-width: .1em !important;
+    border-radius: var(--extreme-circular-border-radius) !important;
+}
+
+.overflow-scroll.content-table-element .data-row td .image-container:hover{
+    border: var(--border-green200-solid) !important;
+}
+.overflow-scroll.content-table-element .data-row td .image-container:active,
+.overflow-scroll.content-table-element .data-row td .image-container:focus{
+    border: var(--border-green400-solid) !important;
+}
+
+.overflow-scroll.content-table-element .data-row td .image-container:hover > img{
+    transform: scale(1.8) !important;
+}
+
+.overflow-scroll.content-table-element .data-row td .image-container:active > img,
+.overflow-scroll.content-table-element .data-row td .image-container:focus > img{
+    transform: scale(2) !important;
+}
+/*End of Overflow table styling*/
+
+/*Chart JS element styling*/
+.stat-item-container{
+    display: grid;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer !important;
+
+    border-radius: 1em !important;
+    padding: .25em !important;
+
+    overflow: scroll !important;
+    width: auto !important;
+}
+
+.stat-item-container canvas{
+    position: relative !important;
+    width: 100% !important;
+}
+
+.grid-body-content-section.stats-container{
+    margin: 0 !important;
+    padding: 0 !important;
+}
+/*End of Chart JS element styling*/
+
+
+/*Form text field styling*/
+form input, form textarea, form input, form textarea, form input:hover, form textarea:hover, form input:active, form textarea:active, form input:focus, form textarea:focus{
+    border-radius: .5em !important;
+    box-shadow: none !important;
+}
+/*End of Form text field styling*/
+
+
 /*Mobile adaptive design*/
 /* styling for grid on mobile */
 @media (max-width: 820px) {
@@ -710,6 +838,12 @@ body{
         transform: translate(120%, -48%) !important;
     }
     /*End of Cart Button Styling*/
+
+    /*Order History content section styling*/
+    .order-history-content-section{
+        margin: 1em !important;
+    }
+    /*End of Order History content section styling*/
 }
 
 @media (max-width: 550px) {
@@ -741,7 +875,10 @@ body{
     }
 
     .grid-body-content-section.four-grid{
-        grid-template-columns: 1fr 1fr !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .grid-body-content-section.two-grid, .grid-body-content-section.three-grid{
+        grid-template-columns: repeat(1, 1fr) !important;
     }
     /*End of Cart Container Body Styling*/
 
@@ -786,6 +923,12 @@ body{
         transform: translate(140%, -80%) !important;
     }
     /*End of Cart Button Styling*/
+
+    /*Order History content section styling*/
+    .order-history-content-section{
+        margin: .65em !important;
+    }
+    /*End of Order History content section styling*/
 }
 
 /*Ultra Wide screen*/
@@ -820,4 +963,10 @@ body{
         grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr !important;
     }
     /*End of Cart Container Body Styling*/
+
+    /*Order History content section styling*/
+    .order-history-content-section{
+        margin: 3em !important;
+    }
+    /*End of Order History content section styling*/
 }
