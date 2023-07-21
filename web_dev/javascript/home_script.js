@@ -15,6 +15,8 @@ const UPDATE_CART_BTN = $('button[name=update-cart-btn]');
 const CLEAR_CART_BTN = $('button[name=clear-cart-btn]');
 const CHECKOUT_CART_BTN = $('button[name=go-to-checkout-btn]');
 
+const CUSTOMER_UID = 'e391c7cb-e9c7-ed11-b597-00224897d329';
+
 /*Util Functions*/
 function clean_white_space(input_string, all=true){
     return input_string.replace(/\s+/g, all ? '' : ' ');
@@ -34,7 +36,7 @@ function capitalise_str(input_str){
 }
 
 function get_category_relative_path(category_uid){
-    return `${window.location.origin}view-products?category-uid=${category_uid}`;
+    return `${window.location.origin}/view-products?category-uid=${category_uid}`;
 }
 
 function is_json_data_empty(data){
@@ -115,11 +117,7 @@ function _drag_element(elem){
         initial_vert_pos = curr_vert_pos - e.clientY;
         curr_hrz_pos = e.clientX;
         curr_vert_pos = e.clientY;
-        // set the element's new position:
-        //elem.style.bottom = _format_new_elem_vert_position(elem.offsetTop - initial_vert_pos);
-        //elem.style.left = _format_new_elem_hrz_position(elem.offsetLeft - initial_hrz_pos);
-        //elem.style.left = `${curr_hrz_pos * 100 / screen_width}vw`;
-        console.log(curr_hrz_pos);
+        
         elem.style.left = _format_new_elem_hrz_position(curr_hrz_pos);
         //elem.style.bottom = _format_new_elem_hrz_position(curr_vert_pos);
       }
@@ -137,25 +135,25 @@ function render_category_card(category_json_data){
     const _img_url = is_json_data_empty(category_json_data.prg_img_url) ? PLACE_HOLDER_IMG_URL : category_json_data.prg_img_url;
     const _hex_colour = is_json_data_empty(category_json_data.prg_hexcolour) ? '#e6e6e4' : `#${category_json_data.prg_hexcolour.replace('#', '')}`;
     //category-card-uid-${category_json_data.prg_uomprocurementservicecategoriesid}
-    let category_card_markup = `<div class='card-container category-card' name='category-card-container'
-                                        data-uid='${category_json_data.prg_uomprocurementservicecategoriesid}'
-                                        data-name='${category_json_data.prg_name}'
-                                        style='background-color: ${_hex_colour}'>
-                                    <div class='thumbnail-img-container'>
-                                        <img src='${_img_url}'/>
-                                    </div>
-                                    <br><br>
-                                    <div class='text-container'>
-                                        <div class='desc-txt_bx'>
-                                            <div class='desc-txt_bx'>
-                                                <span style='font-weight: bold;'>${category_json_data.prg_name}</span>
-                                            </div>
-                                        </div>
-                                        <span class="material-symbols-rounded">chevron_right</span>
-                                    </div>
-                                    <br>
-                                </div>`
-    $('.grid-body-content-section').append(category_card_markup);
+    $('.grid-body-content-section').append(`
+        <div class='card-container category-card' name='category-card-container'
+            data-uid='${category_json_data.prg_uomprocurementservicecategoriesid}'
+            data-name='${category_json_data.prg_name}'
+            style='background-color: ${_hex_colour}'>
+            <div class='thumbnail-img-container'>
+                <img src='${_img_url}'/>
+            </div>
+            <br><br>
+            <div class='text-container'>
+                <div class='desc-txt_bx'>
+                    <div class='desc-txt_bx'>
+                        <span style='font-weight: bold;'>${category_json_data.prg_name}</span>
+                    </div>
+                </div>
+                <span class="material-symbols-rounded">chevron_right</span>
+            </div>
+            <br>
+        </div>`);
 }
 
 
@@ -177,55 +175,56 @@ function render_product_cards(products, parent_container, show_category=false){
     products.forEach(product => {
         let product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='add-to-cart-btn' ${product.max_quantity <= 0 ? 'disabled' : ''}>${product.max_quantity <= 0 ? 'Out of Stock' : 'Add to Cart'}</button>`;
         if (product.is_cart_item) product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='remove-cart-item-btn' id="clear-cart-btn" style='background-color: #F57F25;' data-btnlabel='Remove Item'>Remove Item</button>`;
-        parent_container.append(`<div class='card-container product-card' name='product-card-container'
-                                                                data-productuid='${product.uid}' data-fromcart='${product.is_cart_item ? '1' : '0'}'
-                                                                data-name='${product.name}' data-nametrimmed='${product.trimmed_name}'
-                                                                data-vendormapocode='${product.vendor_map_code}' data-vendormapuid='${product.vendor_map_uid}'
-                                                                data-barcode='${product.product_barcode}'
-                                                                data-brand='${product.brand_name}' data-brandcode='${product.brand_code}'
-                                                                data-orderunitname='${product.order_unit_name}' data-orderunitcode='${product.order_unit_code}'
-                                                                data-unitsize='${product.unit_size}' data-productsize='${product.product_size}'
-                                                                data-categoryname='${product.category_name}' data-categoryuid='${product.category_uid}'
-                                                                data-subcategoryname='${product.subcategory_name}' data-subcategoryuid='${product.subcategory_uid}'
-                                                                data-vendorname='${product.vendor_name}' data-vendoruid='${product.vendor_uid}' 
-                                                                data-minquantity='${product.min_quantity}' data-maxquantity='${product.max_quantity}'
-                                                                data-vendorstockonhand='${product.vendor_stock_on_hand}' data-vendorstockordered='${product.vendor_stock_ordered}'
-                                                                data-vendorprice='${product.price}'
-                                                                data-numincart='${product.num_in_cart}' data-totalprice='${product.total_price}' data-cartuid='${product.cart_uid}'
-                                                                data-createdon='${product.createdon}'>
-                                                                <p id='product-remark-container' hidden>${product.remark}</p>
-                                                                <div class='thumbnail-img-container'>
-                                                                    <img src='${product.thumbnail_img}'/>
-                                                                </div>
-                                                                <div class='product-description-container'>
-                                                                    <div class='text-container'>
-                                                                        <div class='desc-txt_bx'>
-                                                                            <span style='font-weight: bold;'>${product.name}</span>
-                                                                        </div>
-                                                                        <span class="material-symbols-rounded product-info-btn" name='product-info-btn'>info</span>
-                                                                    </div>
-                                                                    <div style='min-height: 4em;' ${product.is_cart_item ? 'hidden' : ''}>
-                                                                        <hr>
-                                                                        <h6>
-                                                                            ${!show_category ? '' : `<span style='font-weight: 600;'>${product.category_name}${_get_text_padding(longest_category_name, product.category_name)}</span><br>`}
-                                                                            <span style='font-weight: 500; opacity: ${product.subcategory_uid === 'f0d85952-7c19-ee11-8f6c-000d3a6ac9e1' ? '0' : '1'}'>${product.subcategory_name}${_get_text_padding(longest_subcategory_name, product.subcategory_name)}</span><br>
-                                                                        </h6>
-                                                                    </div>
-                                                                    <p>
-                                                                        $${product.price.toFixed(2)}
-                                                                        ${product.is_cart_item ? '<!--' : '<br>'}${is_whitespace(product.product_size) ? '' : `${product.product_size} - `}${product.unit_size} - ${product.order_unit_name}${product.is_cart_item ? '-->' : ''}
-                                                                    </p>
-                                                                </div>
-                                                                <div class='quantity-control-container'>
-                                                                    <i class="fa-solid fa-circle-plus product-quantity-control-btn" name='product-quantity-control-btn' data-add='1'></i>
-                                                                    <input class='product-quantity-input-field integer-input border-effect' type='text' placeholder='${product.min_quantity}' data-maxquantity='${product.max_quantity}' name="product-quantity-input-field" data-minquantity='${product.min_quantity}' ${product.max_quantity <= 0 ? 'disabled' : ''}
-                                                                            ${product.is_cart_item ?  `value='${product.num_in_cart}'` : ''}/>
-                                                                    <i class="fa-solid fa-circle-minus product-quantity-control-btn" name='product-quantity-control-btn' data-add='0'></i>
-                                                                </div>
-                                                                <div style='display: flex; align-items: center; justify-content: center; position: relative; width: 100%; margin-top: 1.25em;'>
-                                                                    ${product_update_btn}
-                                                                </div>
-        </div>`);
+        parent_container.append(`
+            <div class='card-container product-card' name='product-card-container'
+                data-productuid='${product.uid}' data-fromcart='${product.is_cart_item ? '1' : '0'}'
+                data-name='${product.name}' data-nametrimmed='${product.trimmed_name}'
+                data-vendormapocode='${product.vendor_map_code}' data-vendormapuid='${product.vendor_map_uid}'
+                data-barcode='${product.product_barcode}'
+                data-brand='${product.brand_name}' data-brandcode='${product.brand_code}'
+                data-orderunitname='${product.order_unit_name}' data-orderunitcode='${product.order_unit_code}'
+                data-unitsize='${product.unit_size}' data-productsize='${product.product_size}'
+                data-categoryname='${product.category_name}' data-categoryuid='${product.category_uid}'
+                data-subcategoryname='${product.subcategory_name}' data-subcategoryuid='${product.subcategory_uid}'
+                data-vendorname='${product.vendor_name}' data-vendoruid='${product.vendor_uid}' 
+                data-minquantity='${product.min_quantity}' data-maxquantity='${product.max_quantity}'
+                data-vendorstockonhand='${product.vendor_stock_on_hand}' data-vendorstockordered='${product.vendor_stock_ordered}'
+                data-vendorprice='${product.price}'
+                data-numincart='${product.num_in_cart}' data-totalprice='${product.total_price}' data-cartuid='${product.cart_uid}'
+                data-createdon='${product.createdon}'>
+                <p id='product-remark-container' hidden>${product.remark}</p>
+                <div class='thumbnail-img-container'>
+                    <img src='${product.thumbnail_img}'/>
+                </div>
+                <div class='product-description-container'>
+                    <div class='text-container'>
+                        <div class='desc-txt_bx'>
+                            <span style='font-weight: bold;'>${product.name}</span>
+                        </div>
+                        <span class="material-symbols-rounded product-info-btn" name='product-info-btn'>info</span>
+                    </div>
+                    <div style='min-height: 4em;' ${product.is_cart_item ? 'hidden' : ''}>
+                        <hr>
+                        <h6>
+                            ${!show_category ? '' : `<span style='font-weight: 600;'>${product.category_name}${_get_text_padding(longest_category_name, product.category_name)}</span><br>`}
+                            <span style='font-weight: 500; opacity: ${product.subcategory_uid === 'f0d85952-7c19-ee11-8f6c-000d3a6ac9e1' ? '0' : '1'}'>${product.subcategory_name}${_get_text_padding(longest_subcategory_name, product.subcategory_name)}</span><br>
+                        </h6>
+                    </div>
+                    <p>
+                        $${product.price.toFixed(2)}
+                        ${product.is_cart_item ? '<!--' : '<br>'}${is_whitespace(product.product_size) ? '' : `${product.product_size} - `}${product.unit_size} - ${product.order_unit_name}${product.is_cart_item ? '-->' : ''}
+                    </p>
+                </div>
+                <div class='quantity-control-container'>
+                    <i class="fa-solid fa-circle-plus product-quantity-control-btn" name='product-quantity-control-btn' data-add='1'></i>
+                    <input class='product-quantity-input-field integer-input border-effect' type='text' placeholder='${product.min_quantity}' data-maxquantity='${product.max_quantity}' name="product-quantity-input-field" data-minquantity='${product.min_quantity}' ${product.max_quantity <= 0 ? 'disabled' : ''}
+                            ${product.is_cart_item ?  `value='${product.num_in_cart}'` : ''}/>
+                    <i class="fa-solid fa-circle-minus product-quantity-control-btn" name='product-quantity-control-btn' data-add='0'></i>
+                </div>
+                <div style='display: flex; align-items: center; justify-content: center; position: relative; width: 100%; margin-top: 1.25em;'>
+                    ${product_update_btn}
+                </div>
+            </div>`);
     });
 }
 
@@ -249,7 +248,7 @@ function render_body_content(){
                 contentType: 'application/json',
                 accept: 'application/json;odata=verbose',
                 timeout: AJAX_TIMEOUT_DURATION,
-                data: JSON.stringify({"customer_uid": "e391c7cb-e9c7-ed11-b597-00224897d329", 'query_num_items_only': true}),
+                data: JSON.stringify({"customer_uid": CUSTOMER_UID, 'query_num_items_only': true}),
                 complete: function(response, status, xhr){
                     if (String(status) !== 'success'){
                         alert('Unable to load data at this time');
@@ -416,7 +415,7 @@ $(document).ready(function(){
             contentType: 'application/json',
             accept: 'application/json;odata=verbose',
             timeout: AJAX_TIMEOUT_DURATION,
-            data: JSON.stringify({'customer_uid': 'e391c7cb-e9c7-ed11-b597-00224897d329',
+            data: JSON.stringify({'customer_uid': CUSTOMER_UID,
                                     'quantity': quantity,
                                     'map_uid': parent_card.attr('data-vendormapuid'),
                                     'product_uid': parent_card.attr('data-productuid'),
@@ -435,8 +434,12 @@ $(document).ready(function(){
                 parent_card.attr('data-maxquantity', parseInt(Math.floor((parseInt(parent_card.attr('data-vendorstockonhand')) - all_ordered_quantity) / min_val)));
                 parent_card.find('[name=product-quantity-input-field]').attr('data-maxquantity', parseInt(Math.floor((parseInt(parent_card.attr('data-vendorstockonhand')) - all_ordered_quantity) / min_val)));
 
-                CART_BUTTON.attr('data-quantity', response['responseJSON']['num_cart_items']);
-                CART_BUTTON.find('[name=cart-item-num]').eq(0).text(response['responseJSON']['num_cart_items']);
+                if (!response['responseJSON']['existing_order']){
+                    let num_products_in_cart = parseInt(CART_BUTTON.attr('data-quantity'));
+                    num_products_in_cart += 1;
+                    CART_BUTTON.attr('data-quantity', num_products_in_cart);
+                    CART_BUTTON.find('[name=cart-item-num]').eq(0).text(num_products_in_cart);
+                }
                 
                 if (parseInt(parent_card.attr('data-maxquantity')) <= 0) return process_product_out_of_quantity(true, parent_card);
                 alert(`${quantity} ${parent_card.attr('data-orderunitname')} of ${parent_card.attr('data-name')} ${quantity > 1 ? 'have' : 'has'} been added to your cart`);
@@ -565,7 +568,7 @@ $(document).ready(function(){
             contentType: 'application/json',
             accept: 'application/json;odata=verbose',
             timeout: AJAX_TIMEOUT_DURATION,
-            data: JSON.stringify({"customer_uid": "e391c7cb-e9c7-ed11-b597-00224897d329", 'query_num_items_only': false}),
+            data: JSON.stringify({"customer_uid": CUSTOMER_UID, 'query_num_items_only': false}),
             complete: function(response, status, xhr){
                 modal_content_body.find('.cart-item-container-section').empty();
                 if (String(status) !== 'success'){
@@ -647,7 +650,7 @@ $(document).ready(function(){
                 if (!isNaN(new_quantity) && new_quantity != parseInt($(this).attr('data-numincart'))){
                     input_field.val(new_quantity);
                     update_cart_items.push({
-                        'user_uid': 'e391c7cb-e9c7-ed11-b597-00224897d329',
+                        'user_uid': CUSTOMER_UID,
                         'cart_uid': $(this).attr('data-cartuid'),
                         'map_uid': $(this).attr('data-vendormapuid'),
                         'new_quantity': new_quantity,
@@ -714,6 +717,44 @@ $(document).ready(function(){
                     ajax_update_cart_item(update_cart_item);
                     }, y * 280);
                 }(idx));
+        });
+    });
+
+    //Checkout Cart
+    CHECKOUT_CART_BTN.on('click', function(event){
+        const calling_btn = $(this);
+        handle_cart_change_btn_event(calling_btn);
+
+        let cart_items = [];
+        CART_CONTAINER_MODAL.find('.product-card').each(function(){
+            if (parseInt($(this).attr('data-fromcart')) === 1 && 
+                parseInt($(this).attr('data-numincart')) >= parseInt($(this).attr('data-minquantity')) &&
+                parseInt($(this).attr('data-numincart')) <= parseInt($(this).attr('data-maxquantity'))) cart_items.push({'uid': $(this).attr('data-cartuid')});   
+        });
+        if (cart_items.length < 1) return handle_cart_change_btn_event(calling_btn, false);
+
+        $.ajax({
+            type: 'POST',
+            url: 'https://prod-26.australiasoutheast.logic.azure.com:443/workflows/09ee0fc4ae0e429ba1f356fd869ead7a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=w_ihAcfDKj7Bc9wBrwKjKK5Ysst6WGGo6880mYpwM6M',
+            contentType: 'application/json',
+            accept: 'application/json;odata=verbose',
+            timeout: AJAX_TIMEOUT_DURATION,
+            data: JSON.stringify({'customer_uid': CUSTOMER_UID, 'cart_items': cart_items}),
+            complete: function(response, status, xhr){
+                if (String(status) !== 'success'){ 
+                    handle_cart_change_btn_event(calling_btn, false);
+                    return alert('Checkout Error');
+                }
+
+                CART_BUTTON.attr('data-quantity', 0);
+                CART_BUTTON.find('[name=cart-item-num]').eq(0).text(0);
+
+                CART_CONTAINER_MODAL.find('.modal-footer').toggle(false);
+                CART_CONTAINER_MODAL.find('.modal-title').text("You haven't yet added any product to cart");
+                $('.cart-item-container-section').empty();
+                alert(`Checkout success for ${cart_items.length} product${cart_items.length > 1 ? 's' : ''} ordered.\nA confirmation email will be sent to your email ${response['responseJSON']['confirmation_email']} shortly after`);
+                handle_cart_change_btn_event(calling_btn, false);
+            }
         });
     });
 });
