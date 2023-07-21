@@ -25,17 +25,17 @@
         <link href='https://cdn.jsdelivr.net/npm/remixicon@2.2.0/fonts/remixicon.css' rel='stylesheet'>
 
         <!--Google Material Icons-->
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+        <link rel='stylesheet' href='https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200' />
 
         <!--Chart JS cdn-->
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.3.0/chart.min.js" integrity="sha512-mlz/Fs1VtBou2TrUkGzX4VoGvybkD9nkeXWJm3rle0DPHssYYx4j+8kIS15T78ttGfmOjH0lLaBXGcShaVkdkg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-autocolors"></script>
+        <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.3.0/chart.min.js' integrity='sha512-mlz/Fs1VtBou2TrUkGzX4VoGvybkD9nkeXWJm3rle0DPHssYYx4j+8kIS15T78ttGfmOjH0lLaBXGcShaVkdkg==' crossorigin='anonymous' referrerpolicy='no-referrer'></script>
+        <script src='https://cdn.jsdelivr.net/npm/chart.js'></script>
+        <script src='https://cdn.jsdelivr.net/npm/chartjs-plugin-autocolors'></script>
 
         <!--Moment JS Date Range picker-->
-        <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
-        <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
-        <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+        <script type='text/javascript' src='https://cdn.jsdelivr.net/momentjs/latest/moment.min.js'></script>
+        <script type='text/javascript' src='https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js'></script>
+        <link rel='stylesheet' type='text/css' href='https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css' />
     </head>
     <body>
         <!--Google Material Icon Stylings-->
@@ -53,17 +53,17 @@
         <!--Modals-->
         <div class='modal' id='ItemInfoModal' tabindex='-1' role='dialog' aria-labelledby='ItemInfoModalLabel' aria-hidden='true' name='product-info-modal'>
             <div class='modal-dialog'>
-                <div class='modal-content' style="min-width: 350px;">
+                <div class='modal-content' style='min-width: 300px; width: 98vw;'>
                     <div class='modal-header'>
                         <h5 class='modal-title'></h5>
                         <i class='fa-solid fa-xmark close-modal-btn' name='close-item-info-modal-button'></i>
                     </div>
-                    <div class='modal-body' name="product-info-section">
+                    <div class='modal-body' name='product-info-section' style='display: flex; flex-direction: column; justify-content: center; align-items: center;'>
                     </div>
-                    <div class="modal-footer cart-modal-btn-container">
-                        <button type='button' class='btn btn-primary' name='cancel-order-btn' style='transition: 0.1s ease-in-out;' data-btnlabel="Cancel Order">Cancel Order</button>
-                        <button type='button' class='btn btn-primary' name='request-return-order-btn' style='transition: 0.1s ease-in-out;' data-btnlabel="Issue Return">Issue Return</button>
-                        <button type='button' class='btn btn-primary' name='st-wrong-order-btn' style='transition: 0.1s ease-in-out;' data-btnlabel="Other Issues">Other Issues</button>
+                    <div class='modal-footer cart-modal-btn-container'>
+                        <button type='button' class='btn btn-primary' name='cancel-order-btn' style='transition: 0.1s ease-in-out;' data-btnlabel='Cancel Order'>Cancel Order</button>
+                        <button type='button' class='btn btn-primary' name='request-return-order-btn' style='transition: 0.1s ease-in-out;' data-btnlabel='Issue Return'>Issue Return</button>
+                        <button type='button' class='btn btn-primary' name='st-wrong-order-btn' style='transition: 0.1s ease-in-out;' data-btnlabel='Other Issues'>Other Issues</button>
                     </div>
                 </div>
             </div>
@@ -71,51 +71,58 @@
 
         <div class='modal searched-product-modal' id='ItemInfoModal' tabindex='-1' role='dialog' aria-labelledby='ItemInfoModalLabel' aria-hidden='true' name='issue-order-ticket-modal'>
             <div class='modal-dialog'>
-                <div class='modal-content'>
+                <div class='modal-content' style='min-width: 300px;'>
                     <div class='modal-header'>
                         <h5 class='modal-title'></h5>
                         <i class='fa-solid fa-xmark close-modal-btn' name='close-item-info-modal-button'></i>
                     </div>
                     <div class='modal-body'>
                         <form>
-                            <div class="mb-3">
-                                <label for="TicketTitleInput" class="form-label">Ticket Title</label>
-                                <input type="text" class="form-control border-effect" id="TicketTitleInput" maxlength="400" name="order-issue-ticket-title-input">
+                            <div class='mb-3'>
+                                <label for='TicketTitleInput' class='form-label'>Ticket Title</label>
+                                <input type='text' class='form-control border-effect' id='TicketTitleInput' maxlength='400' name='order-issue-ticket-title-input'>
                             </div><br>
-                            <div class="mb-3">
-                                <label for="TicketRemarkInput" class="form-label">Ticket Remark</label>
-                                <textarea type="text" class="form-control border-effect" id="RequestRemarkInput" maxlength="4000" placeholder="The more information can provide us with, the more effective we can assist you" rows="4" name="order-issue-ticket-desc-input"></textarea>
+                            <div class='mb-3'>
+                                <label for='TicketRemarkInput' class='form-label'>Ticket Remark</label>
+                                <textarea type='text' class='form-control border-effect' id='RequestRemarkInput' maxlength='4000' placeholder='The more information can provide us with, the more effective we can assist you' rows='4' name='order-issue-ticket-desc-input'></textarea>
                             </div><br>
                         </form>
                     </div>
-                    <div class="modal-footer cart-modal-btn-container">
-                        <button type='button' class='btn btn-primary' name='send-order-ticket-btn' style='transition: 0.1s ease-in-out;' id="update-cart-btn" data-btnlabel="Submit" data-sendingrequest="0">Submit</button>
+                    <div class='modal-footer cart-modal-btn-container'>
+                        <button type='button' class='btn btn-primary' name='send-order-ticket-btn' style='transition: 0.1s ease-in-out;' id='update-cart-btn' data-btnlabel='Submit' data-sendingrequest='0'>Submit</button>
                     </div>
                 </div>
             </div>
         </div>
         
-        <section class="content-section search-and-filter-section">
+        <section class='content-section search-and-filter-section'>
             <div name='search-filter-container' class='search-filter-container'>
-                <div class='search-bar-container border-effect' style="max-width: 500px;">
+                <div class='search-bar-container border-effect' style='max-width: 500px;'>
                     <i class='fa fa-search' id='search-icon'></i>
-                    <input class='search-text-field filter-search-text-field' type='text' placeholder='Search for orders' name="product-search-input-field">
+                    <input class='search-text-field filter-search-text-field' type='text' placeholder='Search for orders' name='product-search-input-field'>
                 </div>
             </div>
             <br>
-            <div class="grid-body-content-section four-grid">
-                <div class='filter-container' name="vendor-name-filter">
+            <div class='grid-body-content-section four-grid'>
+                <div class='filter-container' name='vendor-name-filter'>
                     <a class='nav-link' id='navbarDropdown' role='button' data-bs-toggle='dropdown' aria-expanded='false'>
                         Vendor
                     </a>
                     <ul class='dropdown-menu dropdown-menu-end' aria-labelledby='navbarDropdown' onclick='event.stopPropagation()' id='item-filter-dropdown' name='vendor-filter-opts'>
                     </ul>
                 </div>
-                <div class='filter-container' name="brand-name-filter">
+                <div class='filter-container' name='brand-name-filter'>
                     <a class='nav-link' id='navbarDropdown' role='button' data-bs-toggle='dropdown' aria-expanded='false'>
                         Brand
                     </a>
                     <ul class='dropdown-menu dropdown-menu-end' aria-labelledby='navbarDropdown' onclick='event.stopPropagation()' id='item-filter-dropdown' name='brand-filter-opts'>
+                    </ul>
+                </div>
+                <div class='filter-container'>
+                    <a class='nav-link' id='navbarDropdown' role='button' data-bs-toggle='dropdown' aria-expanded='false'>
+                        Product
+                    </a>
+                    <ul class='dropdown-menu dropdown-menu-end' aria-labelledby='navbarDropdown' onclick='event.stopPropagation()' id='item-filter-dropdown' name='product-filter-opts'>
                     </ul>
                 </div>
                 <div class='filter-container'>
@@ -194,69 +201,73 @@
                     </ul>
                 </div>
             </div><br>
-            <div class="grid-body-content-section one-grid">
+            <div class='grid-body-content-section one-grid'>
                 <div class='filter-container' name='order-date-filter-opts'>
                     Order date
-                    <input class='search-text-field filter-search-text-field' type="text" name="order-date-range" type="datetime-local"/>
+                    <input class='search-text-field filter-search-text-field' type='text' name='order-date-range' type='datetime-local'/>
                 </div>
             </div>
             <br>
-            <div class="grid-body-content-section two-grid">
+            <div class='grid-body-content-section two-grid'>
                 <button type='button' class='btn btn-primary' name='apply-search-filter-btn' style='transition: 0.1s ease-in-out;' disabled>Apply Filters</button>
                 <button type='button' class='btn btn-primary' name='clear-search-filter-btn' style='transition: 0.1s ease-in-out;' disabled>Clear Filters</button>
             </div>
             <br><br>
         </section>
 
-        <section class="resource-loader-section">
-            <div class='resource-loader' name="spinner-resource-loader-container">
+        <section class='resource-loader-section'>
+            <div class='resource-loader' name='spinner-resource-loader-container'>
                 <img src='https://i.ibb.co/Vp2hJGW/loading-spinner.gif'>
              </div>
-             <div class='resource-loader' name="progress-resource-loader-container">
+             <div class='resource-loader' name='progress-resource-loader-container'>
                 <br><br>
-                <div class="progress">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%" 
-                    name="request-loader-progress-bar"></div>
+                <div class='progress'>
+                    <div class='progress-bar progress-bar-striped progress-bar-animated' role='progressbar' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100' style='width: 0%' 
+                    name='request-loader-progress-bar'></div>
                     </div>
                 <br>
-                <!--<div class="progress-indicator"><h6>0%</h6></div>-->
+                <!--<div class='progress-indicator'><h6>0%</h6></div>-->
             </div>
         </section>
 
-        <section class="content-section order-history-content-section" name="order-stat-container-section">
-            <div class="order-history-content-container">
-                <div class="grid-body-content-section two-grid stats-container" name="order-payment-status-stat-container"></div><br>
-                <div class="grid-body-content-section one-grid stats-container" name="order-vendor-stat-container"></div><br>
-                <div class="grid-body-content-section one-grid stats-container" name="order-category-stat-container"></div><br>
-                <div class="grid-body-content-section one-grid stats-container" name="order-subcategory-stat-container"></div><br>
-                <div class="grid-body-content-section one-grid stats-container" name="order-weekofyear-stat-container"></div>
+        <section class='content-section order-history-content-section' name='order-stat-container-section'>
+            <div class='order-history-content-container'>
+                <div class='grid-body-content-section two-grid stats-container' name='order-payment-status-stat-container'></div><br>
+                <div class='grid-body-content-section one-grid stats-container' name='order-vendor-stat-container'></div><br>
+                <div class='grid-body-content-section one-grid stats-container' name='order-category-stat-container'></div><br>
+                <div class='grid-body-content-section one-grid stats-container' name='order-subcategory-stat-container'></div><br>
+                <div class='grid-body-content-section one-grid stats-container' name='order-weekofyear-stat-container'></div>
             </div>
             <br><br>
         </section>
 
-        <section class="content-section search-and-filter-section">
-            <div class="grid-body-content-section one-grid">
-                <div class='filter-container' name='num-total-order-txt-container'>
-                    Total Products Ordered:<span></span>
-                </div>
+        <section class='content-section order-history-content-section'>
+            <div class='order-history-content-container'>
+                <section class='search-and-filter-section'>
+                    <div class='grid-body-content-section one-grid'>
+                        <div class='filter-container' name='num-total-order-txt-container'>
+                            Total Products Ordered:<span></span>
+                        </div>
+                    </div>
+                </section>
             </div>
         </section>
 
-        <section class="content-section order-history-content-section">
-            <div class="order-history-content-container">
+        <section class='content-section order-history-content-section'>
+            <div class='order-history-content-container'>
                 <div class='overflow-scroll content-table-element'>
-                    <table class="table table-hover shadow-inset rounded" name="order-history-table">
+                    <table class='table table-hover shadow-inset rounded' name='order-history-table'>
                         <thead class='sticky-top'>
                             <tr>
-                                <th class="border-0 table-header" scope="col"></th>
-                                <th class="border-0 table-header" scope="col">Order Code</th>
-                                <th class="border-0 table-header" scope="col">Product</th>
-                                <th class="border-0 table-header" scope="col">Vendor</th>
-                                <th class="border-0 table-header" scope="col">Quantity</th>
-                                <th class="border-0 table-header" scope="col">Spent</th>
-                                <th class="border-0 table-header" scope="col">Ordered On</th>
-                                <th class="border-0 table-header" scope="col">Payment Status</th>
-                                <th class="border-0 table-header" scope="col">Order Status</th>
+                                <th class='border-0 table-header' scope='col'></th>
+                                <th class='border-0 table-header' scope='col'>Order Code</th>
+                                <th class='border-0 table-header' scope='col'>Product</th>
+                                <th class='border-0 table-header' scope='col'>Vendor</th>
+                                <th class='border-0 table-header' scope='col'>Quantity</th>
+                                <th class='border-0 table-header' scope='col'>Spent</th>
+                                <th class='border-0 table-header' scope='col'>Ordered On</th>
+                                <th class='border-0 table-header' scope='col'>Payment Status</th>
+                                <th class='border-0 table-header' scope='col'>Order Status</th>
                             </tr>
                         </thead>
                         <tbody>

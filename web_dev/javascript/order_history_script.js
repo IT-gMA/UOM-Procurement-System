@@ -14,13 +14,14 @@ const ORDER_HISTORY_TABLE = $('table[name=order-history-table]');
 
 const ORDER_DATE_FILTER_DROPDOWN = $('input[name="order-date-range"]');
 const VENDOR_FILTER_DROPDOWN = $('ul[name=vendor-filter-opts]');
+const PRODUCT_FILTER_DROPDOWN = $('ul[name=product-filter-opts]');
 const CATEGORY_FILTER_DROPDOWN = $('ul[name=category-filter-opts]');
 const SUBCATEGORY_FILTER_DROPDOWN = $('ul[name=sub-category-filter-opts]');
 const BRAND_FILTER_DROPDOWN = $('ul[name=brand-filter-opts]');
 const ORDER_STATUS_FILTER_DROPDOWN = $('ul[name=order-status-filter-opts]');
 const PAYMENT_STATUS_FILTER_DROPDOWN = $('ul[name=payment-status-filter-opts]');
 let product_filter_checkbox_func_names = '';
-const FILTER_DROPDOWNS = [VENDOR_FILTER_DROPDOWN, CATEGORY_FILTER_DROPDOWN, SUBCATEGORY_FILTER_DROPDOWN, BRAND_FILTER_DROPDOWN, ORDER_STATUS_FILTER_DROPDOWN, PAYMENT_STATUS_FILTER_DROPDOWN];
+const FILTER_DROPDOWNS = [VENDOR_FILTER_DROPDOWN, CATEGORY_FILTER_DROPDOWN, SUBCATEGORY_FILTER_DROPDOWN, BRAND_FILTER_DROPDOWN, ORDER_STATUS_FILTER_DROPDOWN, PAYMENT_STATUS_FILTER_DROPDOWN, PRODUCT_FILTER_DROPDOWN];
 FILTER_DROPDOWNS.forEach((dropdown, idx) => {
     product_filter_checkbox_func_names += `input[name=${dropdown.attr('name')}-checkbox]${idx < FILTER_DROPDOWNS.length - 1 ? ', ' : ''}`;
 });
@@ -49,6 +50,7 @@ const PAYMENT_STATUS_FILTER_OPTS = [
 ]
 
 let brand_filter_options = [];
+let product_filter_options = [];
 let category_filter_options = [];
 let subcategory_filter_options = [];
 let vendor_filter_options = [];
@@ -96,11 +98,6 @@ function get_min_max_from_dt_arr(dt_arr){
 }
 
 function is_within_datetime_range(input_date, min_date, max_date){
-    if (!(new Date(`${min_date}`) <= new Date(`${input_date}`) && new Date(`${input_date}`) <= new Date(`${max_date}`))){
-        console.log(new Date(`${min_date}`) <= new Date(`${input_date}`));
-        console.log(new Date(`${max_date}`));
-        console.log(new Date(`${input_date}`));
-    }
     return new Date(`${min_date}`) <= new Date(`${input_date}`) && new Date(`${input_date}`) <= new Date(`${max_date}`);
 }
 
@@ -252,6 +249,7 @@ function render_loading_progress_bar(curr_progress=0){
 
 
 function render_filter_options(dropdown_container, filter_opts){
+    filter_opts = filter_opts.sort((a, b) => a.label.localeCompare(b.label));
     filter_opts.forEach(filter_opt => {
         dropdown_container.append(`
         <div class='dropdown-item'>
@@ -374,6 +372,7 @@ function render_body_content(){
 
                     FORMATTED_UOM_ORDERS.forEach(uom_order => {
                         if (brand_filter_options.length < 0 || !brand_filter_options.map(item => item.value).includes(uom_order.brand_code)) brand_filter_options.push({'value': uom_order.brand_code, 'label': uom_order.brand_name});
+                        if (product_filter_options.length < 0 || !product_filter_options.map(item => item.value).includes(uom_order.product_uid)) product_filter_options.push({'value': uom_order.product_uid, 'label': uom_order.product_name});
                         if (subcategory_filter_options.length < 0 || !subcategory_filter_options.map(item => item.value).includes(uom_order.subcategory_uid)) subcategory_filter_options.push({'value': uom_order.subcategory_uid, 'label': uom_order.subcategory_name});
                         if (category_filter_options.length < 0 || !category_filter_options.map(item => item.value).includes(uom_order.category_uid)) category_filter_options.push({'value': uom_order.category_uid, 'label': uom_order.category_name});
                         if (vendor_filter_options.length < 0 || !vendor_filter_options.map(item => item.value).includes(uom_order.vendor_uid)) vendor_filter_options.push({'value': uom_order.vendor_uid, 'label': uom_order.vendor_name});
@@ -384,6 +383,7 @@ function render_body_content(){
                     set_up_date_range_picker(ORDER_DATE_FILTER_DROPDOWN, min, max);
 
                     render_filter_options(BRAND_FILTER_DROPDOWN, brand_filter_options);
+                    render_filter_options(PRODUCT_FILTER_DROPDOWN, product_filter_options);
                     render_filter_options(CATEGORY_FILTER_DROPDOWN, category_filter_options);
                     render_filter_options(SUBCATEGORY_FILTER_DROPDOWN, subcategory_filter_options);
                     render_filter_options(VENDOR_FILTER_DROPDOWN, vendor_filter_options);
@@ -488,6 +488,7 @@ function render_chart_js_content(no_filter=true){
     });
 
     const filtered_vendors = get_selected_filter_values(`${VENDOR_FILTER_DROPDOWN.attr('name')}-checkbox`);
+    const filtered_products = get_selected_filter_values(`${PRODUCT_FILTER_DROPDOWN.attr('name')}-checkbox`);
     const filtered_categories = get_selected_filter_values(`${CATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
     const filtered_subcategories = get_selected_filter_values(`${SUBCATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
     const filtered_brands = get_selected_filter_values(`${BRAND_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
@@ -501,6 +502,7 @@ function render_chart_js_content(no_filter=true){
     let filtered_uom_orders = no_filter ? FORMATTED_UOM_ORDERS : FORMATTED_UOM_ORDERS.filter(uom_order => 
         (uom_order.trimmed_product_name.includes(searched_txt) || uom_order.order_code_trimmed.includes(searched_txt)) &&
         filtered_subcategories.includes(uom_order.subcategory_uid) && filtered_categories.includes(uom_order.category_uid) &&
+        filtered_products.includes(uom_order.product_uid) &&
         filtered_vendors.includes(uom_order.vendor_uid) &&
         filtered_brands.includes(uom_order.brand_code) &&
         filtered_payment_opts.includes(uom_order.payment_status_code) &&
@@ -929,6 +931,7 @@ $(document).ready(function(){
         disable_button(APPLY_FILTER_BTN, true, BSTR_BORDER_SPINNER);
 
         const filtered_vendors = get_selected_filter_values(`${VENDOR_FILTER_DROPDOWN.attr('name')}-checkbox`);
+        const filtered_products = get_selected_filter_values(`${PRODUCT_FILTER_DROPDOWN.attr('name')}-checkbox`);
         const filtered_categories = get_selected_filter_values(`${CATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
         const filtered_subcategories = get_selected_filter_values(`${SUBCATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
         const filtered_brands = get_selected_filter_values(`${BRAND_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
@@ -943,6 +946,7 @@ $(document).ready(function(){
             $(this).toggle(($(this).attr('data-productnametrimmed').includes(searched_txt) || $(this).attr('data-ordercodetrimmed').includes(searched_txt)) &&
                             filtered_vendors.includes($(this).attr('data-vendoruid')) &&
                             filtered_categories.includes($(this).attr('data-categoryuid')) &&
+                            filtered_products.includes($(this).attr('data-productuid')) &&
                             filtered_subcategories.includes($(this).attr('data-subcategoryuid')) &&
                             filtered_brands.includes(parseInt($(this).attr('data-brandcode'))) &&
                             filtered_payment_opts.includes(parseInt($(this).attr('data-paymentstatuscode'))) &&
@@ -1101,7 +1105,7 @@ $(document).ready(function(){
         ORDER_TICKET_TITLE_INPUT.attr('disabled', true);
         ORDER_TICKET_DESC_INPUT.attr('disabled', true);
         disable_button(this_btn, true, BSTR_BORDER_SPINNER);
-        
+
         $.ajax({
             type: 'POST',
             url: 'https://prod-20.australiasoutheast.logic.azure.com:443/workflows/de01866ca0cb4fe881d003b608a0ee9d/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mJqL8nSjYgU7RdrE55ZjvRVUwTYawj46ZrQiFOmrcHY',
