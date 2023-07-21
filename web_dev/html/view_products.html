@@ -49,11 +49,12 @@
                         <i class='fa-solid fa-xmark close-modal-btn' name='close-item-info-modal-button'></i>
                     </div>
                     <div class='modal-body'>
+                        <form></form>
                     </div>
                     <div class="modal-footer cart-modal-btn-container">
-                        <button type='button' class='btn btn-primary' name='update-cart-btn' style='transition: 0.1s ease-in-out;' id="update-cart-btn" data-btnlabel="Apply Updates">Apply Updates</button>
-                        <button type='button' class='btn btn-primary' name='clear-cart-btn' style='transition: 0.1s ease-in-out;' id="clear-cart-btn" data-btnlabel="Clear all">Clear all</button>
-                        <button type='button' class='btn btn-primary' name='go-to-checkout-btn' style='transition: 0.1s ease-in-out;' id="go-to-checkout-btn" data-btnlabel="Check out">Check out</button>
+                        <button type='button' class='btn btn-primary' name='update-cart-btn' style='transition: 0.1s ease-in-out;' id="update-cart-btn" data-btnlabel="Apply Updates" disabled data-activestatus="0">Apply Updates</button>
+                        <button type='button' class='btn btn-primary' name='clear-cart-btn' style='transition: 0.1s ease-in-out;' id="clear-cart-btn" data-btnlabel="Clear all" disabled data-activestatus="0">Clear all</button>
+                        <button type='button' class='btn btn-primary' name='go-to-checkout-btn' style='transition: 0.1s ease-in-out;' id="go-to-checkout-btn" data-btnlabel="Check out" disabled data-activestatus="0">Check out</button>
                     </div>
                 </div>
             </div>
@@ -146,6 +147,7 @@
                 <img src='https://i.ibb.co/Vp2hJGW/loading-spinner.gif'>
              </div>
              <div class='resource-loader' name="progress-resource-loader-container">
+                <br><br>
                 <div class="progress">
                     <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%" 
                     name="request-loader-progress-bar"></div>
