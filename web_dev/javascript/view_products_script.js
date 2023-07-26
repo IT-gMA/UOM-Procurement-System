@@ -50,11 +50,10 @@ function get_category_relative_path(category_uid){
     return `${window.location.origin}/view-products?category-uid=${category_uid}`;
 }
 
-function _get_text_padding(max_length, curr_txt, html_tag='span'){
-    return '';
-    let padding_length = max_length - curr_txt.length;
+function _get_text_padding(max_length, curr_txt){
+    let padding_length = max_length - curr_txt.length - 1;
     if (padding_length < 1) padding_length = 1;
-    return `<${html_tag} id='text-padding'>${'#'.repeat(max_length - curr_txt.length)}</${html_tag}>`;
+    return `${curr_txt}${` &nbsp; `.repeat(padding_length)}`;
 }
 
 function is_json_data_empty(data){
@@ -65,7 +64,10 @@ function is_json_data_empty(data){
 
 function hide_elems_on_load(complete=false){
     $('div[name=progress-resource-loader-container]').toggle(false);
+
+    // Hide / Show Main content sections / containers
     $('.content-section').toggle(complete);
+    // Hide / Show loading progress / loader
     $('.resource-loader-section').toggle(!complete);
 }
 
@@ -154,7 +156,6 @@ function render_loading_progress_bar(curr_progress=0){
 
     PROGRESS_BAR_DOM.attr('aria-valuenow', curr_progress);
     PROGRESS_BAR_DOM.css('width', `${curr_progress}%`);
-    //$('.progress-indicator').find('h6').text(`${curr_progress.toFixed(2)}%`);
 }
 /*End of Util functions*/
 
@@ -166,18 +167,22 @@ function write_cart_modal_header(header_dom, cart_items){
 }
 
 function render_product_cards(products, parent_container, show_category=false){
-    console.log(products);
     const longest_category_name = products.sort((a, b) => b.category_name.length - a.category_name.length)[0]['category_name'].length;
     const longest_subcategory_name = products.sort((a, b) => b.subcategory_name.length - a.subcategory_name.length)[0]['subcategory_name'].length;
+    const longest_order_size_desc_txt = products.sort((a, b) => b.order_size_desc_txt.length - a.order_size_desc_txt.length)[0]['order_size_desc_txt'].length;
     let sort_product_by_name = products.length > 0;
     if (products[0].is_cart_item) sort_product_by_name = false;
     if (sort_product_by_name) products.sort((a, b) => a.name.localeCompare(b.name));
     products.forEach(product => {
-        let product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='add-to-cart-btn' ${product.max_quantity <= 0 ? 'disabled' : ''}>${product.max_quantity <= 0 ? 'Out of Stock' : 'Add to Cart'}</button>`;
+        // product_update_btn is a button used for changing the product or cart item in its parent grid container
+        // if the item is contained within a product display grid, the button will be an "Add to Cart" button
+        // else (i.e Cart Item) the button will be a "Remove from Cart" button
+        let product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='add-to-cart-btn' ${product.max_quantity - product.min_quantity < 0 ? 'disabled' : ''}>${product.max_quantity - product.min_quantity < 0 ? 'Out of Stock' : 'Add to Cart'}</button>`;
         if (product.is_cart_item) product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='remove-cart-item-btn' id="clear-cart-btn" style='background-color: #F57F25;' data-btnlabel='Remove Item'>Remove Item</button>`;
+
         parent_container.append(`
             <div class='card-container product-card' name='product-card-container'
-                data-productuid='${product.uid}' data-fromcart='${product.is_cart_item ? '1' : '0'}' data-createdon='${product.createdon}'
+                data-productuid='${product.uid}' data-fromcart='${product.is_cart_item ? '1' : '0'}'
                 data-name='${product.name}' data-nametrimmed='${product.trimmed_name}'
                 data-vendormapocode='${product.vendor_map_code}' data-vendormapuid='${product.vendor_map_uid}'
                 data-barcode='${product.product_barcode}'
@@ -190,7 +195,8 @@ function render_product_cards(products, parent_container, show_category=false){
                 data-minquantity='${product.min_quantity}' data-maxquantity='${product.max_quantity}'
                 data-vendorstockonhand='${product.vendor_stock_on_hand}' data-vendorstockordered='${product.vendor_stock_ordered}'
                 data-vendorprice='${product.price}'
-                data-numincart='${product.num_in_cart}' data-totalprice='${product.total_price}' data-cartuid='${product.cart_uid}'>
+                data-numincart='${product.num_in_cart}' data-totalprice='${product.total_price}' data-cartuid='${product.cart_uid}'
+                data-createdon='${product.createdon}'>
                 <p id='product-remark-container' hidden>${product.remark}</p>
                 <div class='thumbnail-img-container'>
                     <img src='${product.thumbnail_img}'/>
@@ -202,25 +208,27 @@ function render_product_cards(products, parent_container, show_category=false){
                         </div>
                         <span class="material-symbols-rounded product-info-btn" name='product-info-btn'>info</span>
                     </div>
-                    <div style='min-height: 4em;' ${product.is_cart_item ? 'hidden' : ''}>
+                    <div style='min-height: ${show_category ? '4' : '2'}em;' ${product.is_cart_item ? 'hidden' : ''}>
                         <hr>
                         <h6>
-                            ${!show_category ? '' : `<span style='font-weight: 600;'>${product.category_name}${_get_text_padding(longest_category_name, product.category_name)}</span><br>`}
-                            <span style='font-weight: 500; opacity: ${product.subcategory_uid === 'f0d85952-7c19-ee11-8f6c-000d3a6ac9e1' ? '0' : '1'}'>${product.subcategory_name}${_get_text_padding(longest_subcategory_name, product.subcategory_name)}</span><br>
+                            ${!show_category ? '' : `<span style='font-weight: 600;'>${_get_text_padding(longest_category_name, product.category_name)}</span>
+                            <br>`}
+                            <span style='font-weight: 500; opacity: ${product.subcategory_uid === 'f0d85952-7c19-ee11-8f6c-000d3a6ac9e1' ? '0' : '1'}'>${_get_text_padding(longest_subcategory_name, product.subcategory_name)}</span>
+                            <br>
                         </h6>
                     </div>
                     <p>
                         $${product.price.toFixed(2)}
-                        ${product.is_cart_item ? '<!--' : '<br>'}${is_whitespace(product.product_size) ? '' : `${product.product_size} - `}${product.unit_size} - ${product.order_unit_name}${product.is_cart_item ? '-->' : ''}
+                        ${product.is_cart_item ? '<!--' : '<br>'}${_get_text_padding(longest_order_size_desc_txt, product.order_size_desc_txt)}${product.is_cart_item ? '-->' : ''}
                     </p>
                 </div>
                 <div class='quantity-control-container'>
                     <i class="fa-solid fa-circle-plus product-quantity-control-btn" name='product-quantity-control-btn' data-add='1'></i>
-                    <input class='product-quantity-input-field integer-input border-effect' type='text' placeholder='${product.min_quantity}' data-maxquantity='${product.max_quantity}' name="product-quantity-input-field" data-minquantity='${product.min_quantity}' ${product.max_quantity <= 0 ? 'disabled' : ''}
+                    <input class='product-quantity-input-field integer-input border-effect' type='text' placeholder='${product.min_quantity}' data-maxquantity='${product.max_quantity}' name="product-quantity-input-field" data-minquantity='${product.min_quantity}' ${product.max_quantity - product.min_quantity < 0 ? 'disabled' : ''}
                             ${product.is_cart_item ?  `value='${product.num_in_cart}'` : ''}/>
                     <i class="fa-solid fa-circle-minus product-quantity-control-btn" name='product-quantity-control-btn' data-add='0'></i>
                 </div>
-                <div style='display: flex; align-items: center; justify-content: center; position: relative; width: 100%; margin-top: 1.25em;'>
+                <div style='display: flex; align-items: center; justify-content: center; position: relative; width: 100%; margin-top: 1.25em; margin-bottom: .45em;'>
                     ${product_update_btn}
                 </div>
             </div>`);
@@ -272,7 +280,8 @@ function process_product_vendor_map(products, vendor_product_maps, cart_items=un
         formatted_product['price'] = vendor_product_map.prg_price_base;
         formatted_product['vendor_stock_on_hand'] = vendor_product_map.prg_stockonhand;
         formatted_product['vendor_stock_ordered'] = vendor_product_map.prg_stockorderd;
-        formatted_product['max_quantity'] = parseInt(Math.floor((vendor_product_map.prg_stockonhand - vendor_product_map.prg_stockorderd) / formatted_product.min_quantity));
+        formatted_product['order_size_desc_txt'] = is_whitespace(formatted_product.product_size) ? `${formatted_product.unit_size} - ${formatted_product.order_unit_name}` : `${formatted_product.product_size} - ${formatted_product.unit_size} - ${formatted_product.order_unit_name}`;
+        formatted_product['max_quantity'] = vendor_product_map.prg_stockonhand - vendor_product_map.prg_stockorderd;
         if (formatted_product['max_quantity'] < 0) formatted_product['max_quantity'] = 0;
 
         if (formatted_product.is_cart_item){
@@ -414,6 +423,7 @@ function get_selected_filter_values(checkbox_name, to_int=false){
         all_values.push(_value_here);
         if($(this).is(':checked') || $(this).prop('checked')) selected_values.push(_value_here);
     });
+    // if no filter option is selected, default to selecting all options
     if (selected_values.length < 1) return all_values;
     return selected_values;
 }
@@ -546,12 +556,19 @@ $(document).ready(function(){
                 disable_button(cart_btn, false, 'Add to Cart');
 
                 if (String(status) !== 'success') return alert('Unable to add to cart at this time');
-                if (!response['responseJSON']['valid']) return process_product_out_of_quantity(false, parent_card);
+
                 const all_ordered_quantity = response['responseJSON']['total_ordered'];
-                
+                const vendor_stock_on_hand = response['responseJSON']['stock_on_hand'];
+                const product_min_quantity = parseInt(parent_card.attr('data-minquantity'));
+
                 parent_card.attr('data-vendorstockordered', all_ordered_quantity);
-                parent_card.attr('data-maxquantity', parseInt(Math.floor((parseInt(parent_card.attr('data-vendorstockonhand')) - all_ordered_quantity) / min_val)));
-                parent_card.find('[name=product-quantity-input-field]').attr('data-maxquantity', parseInt(Math.floor((parseInt(parent_card.attr('data-vendorstockonhand')) - all_ordered_quantity) / min_val)));
+                parent_card.attr('data-maxquantity', vendor_stock_on_hand - all_ordered_quantity);
+                parent_card.find('[name=product-quantity-input-field]').attr('data-maxquantity', parent_card.attr('data-maxquantity'));
+
+                if (!response['responseJSON']['valid']) {
+                    if (vendor_stock_on_hand - all_ordered_quantity - product_min_quantity < 0) return process_product_out_of_quantity(false, parent_card);
+                    return alert(`Only ${vendor_stock_on_hand - all_ordered_quantity} ${parent_card.attr('data-orderunitname')} of ${parent_card.attr('data-name')} left for order`);
+                }
 
                 if (!response['responseJSON']['existing_order']){
                     let num_products_in_cart = parseInt(CART_BUTTON.attr('data-quantity'));
@@ -560,7 +577,7 @@ $(document).ready(function(){
                     CART_BUTTON.find('[name=cart-item-num]').eq(0).text(num_products_in_cart);
                 }
                 
-                if (parseInt(parent_card.attr('data-maxquantity')) <= 0) return process_product_out_of_quantity(true, parent_card);
+                if (parseInt(parent_card.attr('data-maxquantity')) - parseInt(parent_card.attr('data-minquantity')) < 0) return process_product_out_of_quantity(true, parent_card);
                 alert(`${quantity} ${parent_card.attr('data-orderunitname')} of ${parent_card.attr('data-name')} ${quantity > 1 ? 'have' : 'has'} been added to your cart`);
             }
         });
@@ -650,6 +667,8 @@ $(document).ready(function(){
 
     //Update cart
     function handle_cart_change_btn_event(calling_btn, init_update=true){
+        // Disaable all input and button within the same parent modal and 
+        // render the calling button's body with a loading spinner to wait for POST Request completion
         IS_UPDATING_CART = init_update;
         CART_CONTAINER_MODAL.find('button, input').attr('disabled', IS_UPDATING_CART);
         calling_btn.empty();
@@ -718,7 +737,9 @@ $(document).ready(function(){
                     cart_item_grid_elem.attr('data-numincart', input_val);
                     cart_item_grid_elem.attr('data-totalprice', cart_item_price);
                     cart_item_grid_elem.attr('data-vendorstockordered', response['responseJSON']['product_vendor_map']['prg_stockorderd']);
-                    input_field.attr('data-maxquantity', parseInt(Math.floor((response['responseJSON']['product_vendor_map']['prg_stockonhand'] - response['responseJSON']['product_vendor_map']['prg_stockorderd'] + input_val) / update_cart_item.min_quantity)));
+                    const new_max_quantity = response['responseJSON']['product_vendor_map']['prg_stockonhand'] - response['responseJSON']['product_vendor_map']['prg_stockorderd'] + input_val;
+                    cart_item_grid_elem.attr('data-maxquantity', new_max_quantity);
+                    input_field.attr('data-maxquantity', new_max_quantity);
                     if (input_val < 1 && update_cart_item['update_success']) cart_item_grid_elem.remove();
                     _finalise_request();
                 }
