@@ -21,6 +21,12 @@
     --border-green400-solid: solid var(--clr-green-primary-400) !important;
 
     --extreme-circular-border-radius: 50% !important;
+    --skewed-charcoal-box-shadow: .2em .2em var(--clr-programmed-charcoal-400) !important;
+    --skewed-charcoal-box-shadow2: .15em .15em var(--clr-programmed-charcoal-400) !important;
+    --skewed-charcoal-box-shadow3: .1em .1em var(--clr-programmed-charcoal-400) !important;
+    --skewed-charcoal-box-shadow4: .075em .075em var(--clr-programmed-charcoal-400) !important;
+    --skewed-charcoal-box-shadow5: .05em .05em var(--clr-programmed-charcoal-400) !important;
+    --skewed-charcoal-box-shadow6: .025em .025em var(--clr-programmed-charcoal-400) !important;
 }
 
 h1, h2{
@@ -33,6 +39,10 @@ h3{
 
 h5, h4{
     font-size: large !important;
+}
+
+ul{
+    transition: 0s ease-in-out !important;
 }
 
 h6, p, span, input, textarea, button,
@@ -67,14 +77,17 @@ a .fa-solid, .location-name-txt-container .material-symbols-rounded,
     color: var(--clr-programmed-charcoal-400) !important;
 
     font-weight: bold !important;
+    box-shadow: var(--skewed-charcoal-box-shadow) !important;
 }
 
 .btn.btn-primary:hover{
     background-color: var(--clr-green-primary-200) !important;
+    box-shadow: var(--skewed-charcoal-box-shadow2) !important;
 }
 
 .btn.btn-primary:active{
     background-color: var(--clr-green-primary-400) !important;
+    box-shadow: var(--skewed-charcoal-box-shadow3) !important;
 }
 
 #text-padding{
@@ -83,6 +96,7 @@ a .fa-solid, .location-name-txt-container .material-symbols-rounded,
 
 .border-effect{
     transition: .75s ease-in-out !important;
+    box-shadow: var(--skewed-charcoal-box-shadow) !important;
 }
 
 .border-effect:hover{
@@ -142,6 +156,7 @@ body{
     padding: .25em .5em !important;
 
     border: var(--border-charcoal-solid) !important;
+    box-shadow: var(--skewed-charcoal-box-shadow) !important;
 }
 
 .progress-bar.progress-bar-striped.progress-bar-animated{
@@ -193,8 +208,9 @@ body{
 .search-bar-container, .card-container, .btn.btn-primary, .product-quantity-input-field, 
 .cart-btn-container button, .cart-btn-container h6, .progress, .filter-container, .dropdown-menu,
 .overflow-scroll.content-table-element, .stat-item-container, form input, form textarea{
+    transition: .25s ease-in-out;
     border: var(--border-charcoal-solid) !important;
-    border-width: .25em !important;
+    border-width: .15em !important;
 }
 
 .search-bar-container:hover, .product-quantity-input-field:hover
@@ -202,7 +218,20 @@ body{
 .search-bar-container:focus, .product-quantity-input-field:hover,
 .filter-container, .filter-container:hover, .filter-container:focus, .filter-container:active,
 form input:hover, form textarea:hover, form input:hover, form textarea:hover, form input:active, form textarea:active{
-    border-width: .25em !important;
+    border-width: .15em !important;
+    box-shadow: var(--skewed-charcoal-box-shadow2) !important;
+}
+
+.search-bar-container:hover, .product-quantity-input-field:hover
+.product-quantity-input-field:hover, form input:hover, form textarea:hover{
+    box-shadow: var(--skewed-charcoal-box-shadow2) !important;
+}
+
+.search-bar-container:active, .product-quantity-input-field:active
+.product-quantity-input-field:active, form input:active, form textarea:active,
+.search-bar-container:focus, .product-quantity-input-field:focus
+.product-quantity-input-field:focus, form input:focus, form textarea:focus{
+    box-shadow: var(--skewed-charcoal-box-shadow3) !important;
 }
 
 .card-container{
@@ -212,6 +241,13 @@ form input:hover, form textarea:hover, form input:hover, form textarea:hover, fo
 
     padding: .25em !important;
     background-color: var(--clr-off-white-primary);
+    box-shadow: var(--skewed-charcoal-box-shadow) !important;
+
+    transition: .285s ease-in-out !important;
+}
+
+.card-container:hover{
+    box-shadow: var(--skewed-charcoal-box-shadow2) !important;
 }
 
 .thumbnail-img-container, .text-container, .thumbnail-img-container img, .product-description-container,
@@ -303,7 +339,7 @@ form input:hover, form textarea:hover, form input:hover, form textarea:hover, fo
 
     border: none !important;
     border-radius: .5rem !important;
-    box-shadow: var(--default-neumorphic-off-wht-bxshadow) !important;
+    box-shadow: var(--skewed-charcoal-box-shadow) !important;
 
     background-color: var(--clr-off-white-primary) !important;
     color: var(--clr-programmed-charcoal-400) !important;
@@ -328,6 +364,7 @@ form input:hover, form textarea:hover, form input:hover, form textarea:hover, fo
 .filter-container{
     padding: .1em .55em !important;
     font-weight: bold !important;
+    box-shadow: var(--skewed-charcoal-box-shadow) !important;
 }
 
 .filter-container .dropdown-menu{
@@ -501,11 +538,26 @@ form input, form textarea, form input:hover, form textarea:hover, form input:act
     font-weight: bold !important;
 
     transition: .25s ease-in-out !important;
-    color: var(--clr-programmed-charcoal-400) !important;
+    color: var(--clr-off-white-primary) !important;
+    background-color: var(--clr-programmed-charcoal-400) !important;
+    border: var(--border-charcoal-solid) !important;
+    border-radius: var(--extreme-circular-border-radius) !important;
+    border-width: .1em !important;
+    box-shadow: var(--skewed-charcoal-box-shadow4) !important;
 }
 
 .cart-item-container-section .product-quantity-control-btn{
     font-size: large !important;
+}
+
+.product-quantity-control-btn:hover, .product-quantity-control-btn:focus, .product-quantity-control-btn:active{
+    background-color: white !important;
+}
+.product-quantity-control-btn:hover{
+    box-shadow: var(--skewed-charcoal-box-shadow5) !important;
+}
+.product-quantity-control-btn:focus, .product-quantity-control-btn:active{
+    box-shadow: var(--skewed-charcoal-box-shadow6) !important;
 }
 
 .product-quantity-control-btn.fa-circle-plus:hover{
@@ -652,7 +704,7 @@ form input, form textarea, form input:hover, form textarea:hover, form input:act
 }
 
 .order-history-content-section{
-    margin: 2em !important;
+    margin: 1.8em !important;
 }
   
 .order-history-content-container{
@@ -667,7 +719,11 @@ form input, form textarea, form input:hover, form textarea:hover, form input:act
 /*Overflow table styling*/
 .overflow-scroll{
     overflow: scroll !important;
-    width: 100% !important;
+}
+
+.order-history-content-container .overflow-scroll{
+    box-shadow: var(--skewed-charcoal-box-shadow) !important;
+    width: 98% !important;
 }
 
 .overflow-scroll.content-table-element{
@@ -693,8 +749,13 @@ tr td, tr th{
     overflow: hidden !important;
     border: var(--border-charcoal-solid) !important; 
 
-    width: 3em !important;
-    height: 3em !important;
+    width: 2.5em !important;
+    height: 2.5em !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    box-shadow: var(--skewed-charcoal-box-shadow) !important;
 }
 
 .overflow-scroll.content-table-element .data-row td .image-container,
@@ -707,19 +768,22 @@ tr td, tr th{
 
 .overflow-scroll.content-table-element .data-row td .image-container:hover{
     border: var(--border-green200-solid) !important;
+
+    box-shadow: var(--skewed-charcoal-box-shadow2) !important;
 }
 .overflow-scroll.content-table-element .data-row td .image-container:active,
 .overflow-scroll.content-table-element .data-row td .image-container:focus{
     border: var(--border-green400-solid) !important;
+    box-shadow: var(--skewed-charcoal-box-shadow3) !important;
 }
 
 .overflow-scroll.content-table-element .data-row td .image-container:hover > img{
-    transform: scale(1.8) !important;
+    transform: scale(1.5) !important;
 }
 
 .overflow-scroll.content-table-element .data-row td .image-container:active > img,
 .overflow-scroll.content-table-element .data-row td .image-container:focus > img{
-    transform: scale(2) !important;
+    transform: scale(1.75) !important;
 }
 /*End of Overflow table styling*/
 
@@ -732,6 +796,7 @@ tr td, tr th{
 
     border-radius: 1em !important;
     padding: .25em !important;
+    box-shadow: var(--skewed-charcoal-box-shadow) !important;
 
     overflow: scroll !important;
     width: auto !important;
@@ -744,7 +809,7 @@ tr td, tr th{
 
 .grid-body-content-section.stats-container{
     margin: 0 !important;
-    padding: 0 !important;
+    padding: .2em !important;
 }
 /*End of Chart JS element styling*/
 
@@ -752,9 +817,19 @@ tr td, tr th{
 /*Form text field styling*/
 form input, form textarea, form input, form textarea, form input:hover, form textarea:hover, form input:active, form textarea:active, form input:focus, form textarea:focus{
     border-radius: .5em !important;
-    box-shadow: none !important;
+    box-shadow: var(--skewed-charcoal-box-shadow) !important;
 }
 /*End of Form text field styling*/
+
+/*Date Range picker Styling*/
+.daterangepicker td.in-range{
+    background-color: #e0eebf !important;
+}
+
+.daterangepicker td.active, .daterangepicker td.active:hover {
+    background-color: var(--clr-green-primary-400) !important;
+}
+/*End of Date Range picker Styling*/
 
 
 /*Mobile adaptive design*/
@@ -841,7 +916,7 @@ form input, form textarea, form input, form textarea, form input:hover, form tex
 
     /*Order History content section styling*/
     .order-history-content-section{
-        margin: 1em !important;
+        margin: .8em !important;
     }
     /*End of Order History content section styling*/
 }
@@ -926,7 +1001,7 @@ form input, form textarea, form input, form textarea, form input:hover, form tex
 
     /*Order History content section styling*/
     .order-history-content-section{
-        margin: .65em !important;
+        margin: .45em !important;
     }
     /*End of Order History content section styling*/
 }
