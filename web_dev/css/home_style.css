@@ -10,6 +10,9 @@
     --clr-pfm-blue-200: #7fb3dc !important;
     --clr-safety-orange: #F57F25 !important;
     --bs-accordion-active-color: #c2de80 !important;
+
+    --pill-shaped-border-radius: 99999999px;
+
     --default-neumorphic-off-wht-bxshadow: 7px 7px 11px #d5d4d1, -7px -7px 11px #ffffff !important;
     --hover-neumorphic-off-wht-bxshadow: 5px 5px 4px #e6e5e2, -5px -5px 4px #ffffff !important;
     --active-neumorphic-off-wht-bxshadow: inset 5px 5px 4px #e6e5e2, inset -5px -5px 4px #ffffff !important;
@@ -43,6 +46,7 @@ h5, h4{
 
 ul{
     transition: 0s ease-in-out !important;
+    z-index: 2000 !important;
 }
 
 h6, p, span, input, textarea, button,
@@ -72,7 +76,26 @@ a .fa-solid, .location-name-txt-container .material-symbols-rounded,
 }
 /*End of Checkbox styling*/
 
+
+/*Button styling*/
+.single-btn-container{
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-items: center !important;
+    justify-content: center !important;
+    justify-items: center !important;
+
+    padding: .01em 1em !important;
+}
+
+.single-btn-container .btn, .single-btn-container button{
+    max-width: 300px !important;
+    width: 100% !important;
+}
+
 .btn.btn-primary{
+    border-radius: var(--pill-shaped-border-radius) !important;
     background-color: var(--clr-off-white-primary) !important;
     color: var(--clr-programmed-charcoal-400) !important;
 
@@ -89,6 +112,7 @@ a .fa-solid, .location-name-txt-container .material-symbols-rounded,
     background-color: var(--clr-green-primary-400) !important;
     box-shadow: var(--skewed-charcoal-box-shadow3) !important;
 }
+/*End of Button styling*/
 
 #text-padding{
     opacity: 0 !important;
@@ -195,6 +219,7 @@ body{
 .grid-body-content-section, .product-container-section, .cart-item-container-section{
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr !important;
+    grid-auto-rows: 1fr !important;
 }
 
 .grid-body-content-section, .category-card, .category-card .thumbnail-img-container{
@@ -205,9 +230,14 @@ body{
     color: var(--clr-programmed-charcoal-400) !important;
 }
 
-.search-bar-container, .card-container, .btn.btn-primary, .product-quantity-input-field, 
+.category-card, .product-card{
+    height: 100% !important;
+}
+
+.search-bar-container, .card-container, .btn.btn-primary, .product-quantity-input-field, .long-txt-edit-field,
 .cart-btn-container button, .cart-btn-container h6, .progress, .filter-container, .dropdown-menu,
-.overflow-scroll.content-table-element, .stat-item-container, form input, form textarea{
+.overflow-scroll.content-table-element, .stat-item-container, form input, form textarea,
+.opt-selection-btn{
     transition: .25s ease-in-out;
     border: var(--border-charcoal-solid) !important;
     border-width: .15em !important;
@@ -217,26 +247,31 @@ body{
 .search-bar-container:active, .product-quantity-input-field:active
 .search-bar-container:focus, .product-quantity-input-field:hover,
 .filter-container, .filter-container:hover, .filter-container:focus, .filter-container:active,
-form input:hover, form textarea:hover, form input:hover, form textarea:hover, form input:active, form textarea:active{
+form input:hover, form textarea:hover, form input:hover, form textarea:hover, form input:active, form textarea:active,
+.opt-selection-btn:hover,
+.long-txt-edit-field:hover, .long-txt-edit-field:active, .long-txt-edit-field:focus{
     border-width: .15em !important;
     box-shadow: var(--skewed-charcoal-box-shadow2) !important;
 }
 
 .search-bar-container:hover, .product-quantity-input-field:hover
-.product-quantity-input-field:hover, form input:hover, form textarea:hover{
+.product-quantity-input-field:hover, form input:hover, form textarea:hover, .long-txt-edit-field:hover{
     box-shadow: var(--skewed-charcoal-box-shadow2) !important;
 }
 
 .search-bar-container:active, .product-quantity-input-field:active
 .product-quantity-input-field:active, form input:active, form textarea:active,
 .search-bar-container:focus, .product-quantity-input-field:focus
-.product-quantity-input-field:focus, form input:focus, form textarea:focus{
+.product-quantity-input-field:focus, form input:focus, form textarea:focus,
+.opt-selection-btn:active, .opt-selection-btn:focus,
+.long-txt-edit-field:active, .long-txt-edit-field:focus{
     box-shadow: var(--skewed-charcoal-box-shadow3) !important;
 }
 
 .card-container{
-    display: flex;
+    display: grid;
     flex-direction: column !important;
+    grid-template-columns: 1fr;
     border-radius: 1.25em !important;
 
     padding: .25em !important;
@@ -286,7 +321,7 @@ form input:hover, form textarea:hover, form input:hover, form textarea:hover, fo
 .card-container .text-container{
     display: grid !important;
 
-    grid-template-columns: 85% 15% !important;
+    grid-template-columns: 80% 15% !important;
     grid-gap: .5em !important;
 
     justify-content: flex-end !important;
@@ -299,10 +334,10 @@ form input:hover, form textarea:hover, form input:hover, form textarea:hover, fo
     text-align: left !important;
     align-items: center !important;
     justify-content: flex-start !important;
-    height: 5em !important;
+    /*height: 5em !important;*/
     font-weight: bold !important;
 
-    overflow: scroll !important;
+    /*overflow: scroll !important;*/
 }
 
 .card-container .text-container .material-symbols-rounded{
@@ -333,19 +368,34 @@ form input:hover, form textarea:hover, form input:hover, form textarea:hover, fo
     width: 95% !important;
 }
 
-.search-filter-container .filter-container{
+.opt-selection-btn, .search-filter-container .filter-container{
     display: block !important;
-    padding: .5em !important;
-
     border: none !important;
-    border-radius: .5rem !important;
+    border-radius: var(--pill-shaped-border-radius) !important;
     box-shadow: var(--skewed-charcoal-box-shadow) !important;
-
-    background-color: var(--clr-off-white-primary) !important;
-    color: var(--clr-programmed-charcoal-400) !important;
+    padding: .15em .5em !important;
 }
 
-.search-filter-container .filter-container .nav-link{
+.search-filter-container .filter-container{
+    background-color: var(--clr-off-white-primary) !important;
+    color: var(--clr-programmed-charcoal-400) !important;
+    padding: .5em !important;
+}
+
+tr .product-quantity-input-field.integer-input, tr input, tr .product-quantity-input-field, tr .integer-input,
+.opt-selection-btn .nav-link, .long-txt-edit-field{
+    font-size: 1.025em !important;
+}
+
+tr .long-txt-edit-field .long-txt-edit-field{
+    min-width: 200px !important;
+}
+
+.opt-selection-btn .nav-link{
+    font-size: .9em !important;
+    text-align: center !important;
+}
+.search-filter-container .filter-container .nav-link, .filter-container.opt-selection-btn .nav-link{
     font-size: 1.6em !important;
 }
 .search-filter-container .filter-container .nav-link i{
@@ -391,7 +441,7 @@ form input:hover, form textarea:hover, form input:hover, form textarea:hover, fo
 /*Search field styling*/
 
 .search-bar-container, .search-and-filter-section .btn.btn-primary, .product-quantity-input-field,
-.cart-modal-btn-container .btn.btn-primary, .progress, .filter-container{
+.cart-modal-btn-container .btn.btn-primary, .progress, .filter-container, .long-txt-edit-field{
     border-radius: 10000px !important;
 }
 
@@ -417,8 +467,13 @@ form input:hover, form textarea:hover, form input:hover, form textarea:hover, fo
 }
 
 .search-text-field:active, .search-text-field:focus, .product-quantity-input-field:active, .product-quantity-input-field:focus,
-form input, form textarea, form input:hover, form textarea:hover, form input:active, form textarea:active, form input:focus, form textarea:focus{
+form input, form textarea, form input:hover, form textarea:hover, form input:active, form textarea:active, form input:focus, form textarea:focus,
+.long-txt-edit-field:active, .long-txt-edit-field:hover, .long-txt-edit-field:focus{
     outline: none !important;
+}
+
+.red-outline{
+    color: red !important;
 }
 /*End of search field styling*/
 /*End of search & Filter elements styling*/
@@ -573,12 +628,14 @@ form input, form textarea, form input:hover, form textarea:hover, form input:act
     color: red !important;
 }
 
-.product-quantity-input-field{
+.long-txt-edit-field, .product-quantity-input-field{
+    position: relative !important;
     padding: 0 1em !important;
+}
+.product-quantity-input-field{
     min-width: 80px !important;
     max-width: 200px !important;
     width: 60% !important;
-    position: relative !important;
 
     margin: 0 .5em !important;
 }
@@ -741,6 +798,10 @@ form input, form textarea, form input:hover, form textarea:hover, form input:act
     border-bottom: var(--border-charcoal-solid) !important;
 }
 
+.span-grouped-row{
+    vertical-align: top !important;
+}
+
 tr td, tr th{
     vertical-align: middle !important;
 }
@@ -802,7 +863,7 @@ tr td, tr th{
     width: auto !important;
 }
 
-.stat-item-container canvas{
+.stat-item-container canvas, .stat-item-container .pm-stat-item{
     position: relative !important;
     width: 100% !important;
 }
@@ -831,6 +892,26 @@ form input, form textarea, form input, form textarea, form input:hover, form tex
 }
 /*End of Date Range picker Styling*/
 
+
+.disabled-element{
+    pointer-events: none !important; /* Disable pointer events */
+    opacity: 0.8 !important; /* Apply some visual indication of being disabled */
+    cursor: not-allowed !important; /* Change cursor to indicate it's not clickable */
+}
+
+.rotate-upside-down{
+    transform: rotate(180deg);
+}
+
+span[name='collapse-vendor-group-btn'], .inner-load-more-data-row-btn{
+    font-size: 2em !important;
+    transition: .2s ease-in-out !important;
+}
+
+.inner-load-more-data-row-btn:hover{
+    color: var(--clr-green-primary-400);
+    transform: rotate(180deg);
+}
 
 /*Mobile adaptive design*/
 /* styling for grid on mobile */
@@ -884,10 +965,6 @@ form input, form textarea, form input, form textarea, form input:hover, form tex
     /*End of Search and Filter section styling*/
 
     /*Item Card Container styling*/
-    .card-container .text-container .desc-txt_bx{
-        height: 4em !important;
-    }
-
     .product-description-container{
         padding: .3em !important;
     }
@@ -975,10 +1052,6 @@ form input, form textarea, form input, form textarea, form input:hover, form tex
     /*End of Modal Styling*/
 
     /*Item Card Container styling*/
-    .card-container .text-container .desc-txt_bx{
-        height: 3em !important;
-    }
-
     .product-description-container{
         padding: .2em !important;
     }
@@ -1004,6 +1077,13 @@ form input, form textarea, form input, form textarea, form input:hover, form tex
         margin: .45em !important;
     }
     /*End of Order History content section styling*/
+}
+
+@media (max-width: 320px) {
+    .grid-body-content-section, .product-container-section, .cart-item-container-section{
+        grid-template-columns: 1fr !important;
+        padding: .5em 1em !important;
+    }
 }
 
 /*Ultra Wide screen*/

@@ -1,3 +1,5 @@
+const CUSTOMER_UID = 'e391c7cb-e9c7-ed11-b597-00224897d329';
+
 const AJAX_TIMEOUT_DURATION = 864000000;
 const PLACE_HOLDER_IMG_URL = 'https://i.ibb.co/VMPPhzc/place-holder-catering-item-img.webp';
 const APPLY_SEARCH_BTN = $('button[name=apply-search-filter-btn]');
@@ -15,9 +17,13 @@ const UPDATE_CART_BTN = $('button[name=update-cart-btn]');
 const CLEAR_CART_BTN = $('button[name=clear-cart-btn]');
 const CHECKOUT_CART_BTN = $('button[name=go-to-checkout-btn]');
 
-const CUSTOMER_UID = 'e391c7cb-e9c7-ed11-b597-00224897d329';
-
 /*Util Functions*/
+function get_user_id(){
+    const elem_user_id = '{{user.id}}';
+    return elem_user_id.includes('{{') && elem_user_id.includes('}}') ? undefined : elem_user_id;
+    //return elem_user_id.includes('{{') && elem_user_id.includes('}}') ? null : elem_user_id;
+}
+
 function clean_white_space(input_string, all=true){
     return input_string.replace(/\s+/g, all ? '' : ' ');
 }
@@ -179,7 +185,8 @@ function render_product_cards(products, parent_container, show_category=false){
         // product_update_btn is a button used for changing the product or cart item in its parent grid container
         // if the item is contained within a product display grid, the button will be an "Add to Cart" button
         // else (i.e Cart Item) the button will be a "Remove from Cart" button
-        let product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='add-to-cart-btn' ${product.max_quantity - product.min_quantity < 0 ? 'disabled' : ''}>${product.max_quantity - product.min_quantity < 0 ? 'Out of Stock' : 'Add to Cart'}</button>`;
+        //let product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='add-to-cart-btn' ${product.max_quantity - product.min_quantity < 0 ? 'disabled' : ''}>${product.max_quantity - product.min_quantity  < 0 ? 'Out of Stock' : 'Add to Cart'}</button>`;
+        let product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='add-to-cart-btn' ${product.max_quantity <= 0 ? 'disabled' : ''}>${product.max_quantity  <= 0 ? 'Out of Stock' : 'Add to Cart'}</button>`;
         if (product.is_cart_item) product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='remove-cart-item-btn' id="clear-cart-btn" style='background-color: #F57F25;' data-btnlabel='Remove Item'>Remove Item</button>`;
 
         parent_container.append(`
@@ -226,7 +233,9 @@ function render_product_cards(products, parent_container, show_category=false){
                 </div>
                 <div class='quantity-control-container'>
                     <i class="fa-solid fa-circle-plus product-quantity-control-btn" name='product-quantity-control-btn' data-add='1'></i>
-                    <input class='product-quantity-input-field integer-input border-effect' type='text' placeholder='${product.min_quantity}' data-maxquantity='${product.max_quantity}' name="product-quantity-input-field" data-minquantity='${product.min_quantity}' ${product.max_quantity - product.min_quantity < 0 ? 'disabled' : ''}
+                    <!--<input class='product-quantity-input-field integer-input border-effect' type='text' placeholder='${product.min_quantity}' data-maxquantity='${product.max_quantity}' name="product-quantity-input-field" data-minquantity='${product.min_quantity}' ${product.max_quantity - product.min_quantity < 0 ? 'disabled' : ''}
+                            ${product.is_cart_item ?  `value='${product.num_in_cart}'` : ''}/>-->
+                    <input class='product-quantity-input-field integer-input border-effect' type='text' placeholder='${product.min_quantity}' data-maxquantity='${product.max_quantity}' name="product-quantity-input-field" data-minquantity='${product.min_quantity}' ${product.max_quantity <= 0 ? 'disabled' : ''}
                             ${product.is_cart_item ?  `value='${product.num_in_cart}'` : ''}/>
                     <i class="fa-solid fa-circle-minus product-quantity-control-btn" name='product-quantity-control-btn' data-add='0'></i>
                 </div>
@@ -285,64 +294,66 @@ function render_body_content(){
 
 function process_product_vendor_map(products, vendor_product_maps, cart_items=undefined){
     // Assign product-vendor map attributes to each product object accordingly
-    // and format product object's key name
+    let non_duplicate_products = [];
     let formatted_products = [];
     products.forEach(product => {
-        let formatted_product = {
-            'uid': product.prg_uomprocurementserviceproductsid,
-            'product_barcode': is_json_data_empty(product.prg_unitbarcodes) ? '' : product.prg_unitbarcodes,
-            'name': product.prg_name,
-            'trimmed_name': clean_white_space(product.prg_name.trim().toLowerCase()),
-            'thumbnail_img': is_json_data_empty(product.prg_img_url) ? PLACE_HOLDER_IMG_URL : product.prg_img_url,
-            'remark': product.prg_remarks ?? '',
-            'min_quantity': product.prg_minorderquantity,
-            'order_unit_code': product.prg_orderunit,
-            'order_unit_name': product['prg_orderunit@OData.Community.Display.V1.FormattedValue'],
-            'product_size': is_json_data_empty(product.prg_productsize) ? '' : product.prg_productsize,
-            'unit_size': product.prg_unitsize,
-            'category_uid': product['_prg_category_value'],
-            'category_name': product['_prg_category_value@OData.Community.Display.V1.FormattedValue'],
-            'subcategory_uid': product['_prg_subcategory_value'],
-            'subcategory_name': product['_prg_subcategory_value@OData.Community.Display.V1.FormattedValue'],
-            'brand_code': is_json_data_empty(product.prg_brand) ? -1 : product.prg_brand,
-            'brand_name': is_json_data_empty(product['prg_brand@OData.Community.Display.V1.FormattedValue']) ? 'No Brand' : product['prg_brand@OData.Community.Display.V1.FormattedValue'],
-            'vendor_uid': undefined,
-            'vendor_name': undefined,
-            'createdon': product.createdon,
-            'product_stock_on_hand': product.prg_sumstockonhand,
-            'product_stock_ordered': product.prg_sumstockordered,
-            'bulk_order_unit_code': is_json_data_empty(product.prg_bulkorder) ? 0 : product.prg_bulkorder,
-            'bulk_order_unit_name': is_json_data_empty(product.prg_bulkorder) ? 'N/A' : product['prg_bulkorder@OData.Community.Display.V1.FormattedValue'],
-            //For cart items
-            'is_cart_item': cart_items !== undefined,
-            'cart_uid': undefined,
-            'num_in_cart': -1,
-            'total_price': -1,
-        }
-        const vendor_product_map = vendor_product_maps.filter(vendor_product_map => vendor_product_map['_prg_product_value'] === formatted_product.uid && vendor_product_map.prg_price > 0)[0];
-        if (vendor_product_map === undefined) return;
+        if (non_duplicate_products.includes(product.prg_uomprocurementserviceproductsid)) return;
+        non_duplicate_products.push(product.prg_uomprocurementserviceproductsid);
+        vendor_product_maps.filter(vendor_product_map => vendor_product_map['_prg_product_value'] === product.prg_uomprocurementserviceproductsid && vendor_product_map.prg_price > 0).forEach((vendor_product_map) => {
+            let formatted_product = {
+                'uid': product.prg_uomprocurementserviceproductsid,
+                'product_barcode': is_json_data_empty(product.prg_unitbarcodes) ? '' : product.prg_unitbarcodes,
+                'name': product.prg_name,
+                'trimmed_name': clean_white_space(product.prg_name.trim().toLowerCase()),
+                'thumbnail_img': is_json_data_empty(product.prg_img_url) ? PLACE_HOLDER_IMG_URL : product.prg_img_url,
+                'remark': product.prg_remarks ?? '',
+                'min_quantity': product.prg_minorderquantity,
+                'order_unit_code': product.prg_orderunit,
+                'order_unit_name': product['prg_orderunit@OData.Community.Display.V1.FormattedValue'],
+                'product_size': is_json_data_empty(product.prg_productsize) ? '' : product.prg_productsize,
+                'unit_size': product.prg_unitsize,
+                'category_uid': product['_prg_category_value'],
+                'category_name': product['_prg_category_value@OData.Community.Display.V1.FormattedValue'],
+                'subcategory_uid': product['_prg_subcategory_value'],
+                'subcategory_name': product['_prg_subcategory_value@OData.Community.Display.V1.FormattedValue'],
+                'brand_code': is_json_data_empty(product.prg_brand) ? -1 : product.prg_brand,
+                'brand_name': is_json_data_empty(product['prg_brand@OData.Community.Display.V1.FormattedValue']) ? 'No Brand' : product['prg_brand@OData.Community.Display.V1.FormattedValue'],
+                'vendor_uid': vendor_product_map['_prg_vendor_value'],
+                'vendor_name': vendor_product_map['_prg_vendor_value@OData.Community.Display.V1.FormattedValue'],
+                'vendor_map_code': vendor_product_map.prg_code,
+                'vendor_map_uid': vendor_product_map.prg_uomprocurementserviceproductvendormapid,
+                'vendor_stock_on_hand': vendor_product_map.prg_stockonhand,
+                'vendor_stock_ordered': vendor_product_map.prg_stockorderd,
+                'price': vendor_product_map.prg_price_base,
+                'createdon': product.createdon,
+                'product_stock_on_hand': product.prg_sumstockonhand,
+                'product_stock_ordered': product.prg_sumstockordered,
+                'bulk_order_unit_code': is_json_data_empty(product.prg_bulkorder) ? 0 : product.prg_bulkorder,
+                'bulk_order_unit_name': is_json_data_empty(product.prg_bulkorder) ? 'N/A' : product['prg_bulkorder@OData.Community.Display.V1.FormattedValue'],
+                //For cart items
+                'is_cart_item': cart_items !== undefined,
+                'cart_uid': undefined,
+                'num_in_cart': -1,
+                'total_price': -1,
+            }
+            formatted_product['order_size_desc_txt'] = is_whitespace(formatted_product.product_size) ? `${formatted_product.unit_size} - ${formatted_product.order_unit_name}` : `${formatted_product.product_size} - ${formatted_product.unit_size} - ${formatted_product.order_unit_name}`;
+            //formatted_product['max_quantity'] = parseInt(Math.floor((vendor_product_map.prg_stockonhand - vendor_product_map.prg_stockorderd) / formatted_product.min_quantity));
+            //formatted_product['max_quantity'] = vendor_product_map.prg_stockonhand - vendor_product_map.prg_stockorderd;
+            formatted_product['max_quantity'] = vendor_product_map.prg_stockonhand;
+            //if (formatted_product['max_quantity'] == 0) formatted_product['max_quantity'] = formatted_product.min_quantity;
 
-        formatted_product['vendor_uid'] = vendor_product_map['_prg_vendor_value'];
-        formatted_product['vendor_name'] = vendor_product_map['_prg_vendor_value@OData.Community.Display.V1.FormattedValue'];
-        formatted_product['vendor_map_code'] = vendor_product_map.prg_code;
-        formatted_product['vendor_map_uid'] = vendor_product_map.prg_uomprocurementserviceproductvendormapid;
-        formatted_product['price'] = vendor_product_map.prg_price_base;
-        formatted_product['vendor_stock_on_hand'] = vendor_product_map.prg_stockonhand;
-        formatted_product['vendor_stock_ordered'] = vendor_product_map.prg_stockorderd;
-        formatted_product['order_size_desc_txt'] = is_whitespace(formatted_product.product_size) ? `${formatted_product.unit_size} - ${formatted_product.order_unit_name}` : `${formatted_product.product_size} - ${formatted_product.unit_size} - ${formatted_product.order_unit_name}`;
-        formatted_product['max_quantity'] = parseInt(Math.floor((vendor_product_map.prg_stockonhand - vendor_product_map.prg_stockorderd) / formatted_product.min_quantity));
-        formatted_product['max_quantity'] = vendor_product_map.prg_stockonhand - vendor_product_map.prg_stockorderd;
-        //if (formatted_product['max_quantity'] == 0) formatted_product['max_quantity'] = formatted_product.min_quantity;
-
-        if (formatted_product.is_cart_item){
-            const cart_item = cart_items.filter(cart_item => cart_item['_prg_product_value'] === formatted_product.uid)[0];
-            if (cart_item === undefined) return;
-            formatted_product['cart_uid'] = cart_item.prg_uomprocurementorderid,
-            formatted_product['num_in_cart'] = cart_item.prg_stockordered;
-            formatted_product['total_price'] = cart_item.prg_stockordered * formatted_product['price'];
-            formatted_product['max_quantity'] = formatted_product['max_quantity'] + formatted_product['num_in_cart'];
-        }
-        formatted_products.push(formatted_product);
+            if (formatted_product.is_cart_item){
+                const cart_item = cart_items.filter(cart_item => cart_item['_prg_product_value'] === formatted_product.uid
+                                                                && cart_item['_prg_vendorcode_value'] === formatted_product.vendor_map_uid
+                                                                && cart_item['_prg_vendor_value'] === formatted_product.vendor_uid)[0];
+                if (cart_item === undefined) return;
+                formatted_product['cart_uid'] = cart_item.prg_uomprocurementorderid,
+                formatted_product['num_in_cart'] = cart_item.prg_stockordered;
+                formatted_product['total_price'] = cart_item.prg_stockordered * formatted_product['price'];
+                //formatted_product['max_quantity'] = formatted_product['max_quantity'] + formatted_product['num_in_cart'];
+            }
+            formatted_products.push(formatted_product);
+        });
 
     });
     // Filter out products without mapping
@@ -390,8 +401,10 @@ $(document).ready(function(){
         const parent_card = $(this).closest('.product-card');
         const cart_btn = parent_card.find('[name=add-to-cart-btn]').eq(0);
         const max_quantity = parseInt($(this).attr('data-maxquantity'));
-        if (max_quantity <= 0 || cart_btn.prop('disabled') && parent_card.attr('data-fromcart') != '1') return disable_button(cart_btn, true, 'Out of Stock');
-        const valid_input = verify_integer_input($(this), $(this).attr('placeholder'), parseInt($(this).attr('data-minquantity')), parseInt($(this).attr('data-maxquantity')));
+        if (max_quantity < 0) return disable_button(cart_btn, true, 'Out of Stock');
+        //if (max_quantity <= 0 || cart_btn.prop('disabled') && parent_card.attr('data-fromcart') != '1') return disable_button(cart_btn, true, 'Out of Stock');
+        //const valid_input = verify_integer_input($(this), $(this).attr('placeholder'), parseInt($(this).attr('data-minquantity')), parseInt($(this).attr('data-maxquantity')));
+        const valid_input = verify_integer_input($(this), $(this).attr('placeholder'), parseInt($(this).attr('data-minquantity')));
         //disable_button(cart_btn, fal, valid_input ? 'Add to Cart' : 'Invalid Quantity');
     });
 
@@ -404,11 +417,12 @@ $(document).ready(function(){
         const min_val = parseInt(input_field.attr('data-minquantity'));
         const max_val = parseInt(input_field.attr('data-maxquantity'));
 
-        if (max_val <= 0 || cart_btn.prop('disabled') && parent_card.attr('data-fromcart') != '1') return disable_button(cart_btn, true, 'Out of Stock');
+        if (max_val <= 0) return disable_button(cart_btn, true, 'Out of Stock');
+        //if (max_val <= 0 || cart_btn.prop('disabled') && parent_card.attr('data-fromcart') != '1') return disable_button(cart_btn, true, 'Out of Stock');
         let input_val = !input_field.val() || is_whitespace(input_field.val()) ? min_val : parseInt(input_field.val().replace(/\D/g, ''));
         input_val += _is_add ? 1 : -1;
         if (input_val < min_val) input_val = min_val;
-        if (input_val > max_val) input_val = max_val;
+        //if (input_val > max_val) input_val = max_val;
         input_field.val(input_val);
         //disable_button(cart_btn, false, 'Add to Cart');
     });
@@ -426,7 +440,7 @@ $(document).ready(function(){
         input_field.attr('disabled', true);
         let quantity = !input_field.val() || is_whitespace(input_field.val()) ? min_val : parseInt(input_field.val());
 
-        if (quantity < min_val || quantity > max_val){
+        if (quantity < min_val){
             disable_button(cart_btn, false, 'Add to Cart');
             return alert('Unable to add to cart at this time');
         }
@@ -455,13 +469,14 @@ $(document).ready(function(){
                 const product_min_quantity = parseInt(parent_card.attr('data-minquantity'));
 
                 parent_card.attr('data-vendorstockordered', all_ordered_quantity);
-                parent_card.attr('data-maxquantity', vendor_stock_on_hand - all_ordered_quantity);
+                //parent_card.attr('data-maxquantity', vendor_stock_on_hand - all_ordered_quantity);
+                parent_card.attr('data-maxquantity', vendor_stock_on_hand);
                 parent_card.find('[name=product-quantity-input-field]').attr('data-maxquantity', parent_card.attr('data-maxquantity'));
 
-                if (!response['responseJSON']['valid']) {
+                /*if (!response['responseJSON']['valid']) {
                     if (vendor_stock_on_hand - all_ordered_quantity - product_min_quantity < 0) return process_product_out_of_quantity(false, parent_card);
                     return alert(`Only ${vendor_stock_on_hand - all_ordered_quantity} ${parent_card.attr('data-orderunitname')} of ${parent_card.attr('data-name')} left for order`);
-                }
+                }*/
 
                 if (!response['responseJSON']['existing_order']){
                     let num_products_in_cart = parseInt(CART_BUTTON.attr('data-quantity'));
@@ -470,7 +485,7 @@ $(document).ready(function(){
                     CART_BUTTON.find('[name=cart-item-num]').eq(0).text(num_products_in_cart);
                 }
                 
-                if (parseInt(parent_card.attr('data-maxquantity')) - parseInt(parent_card.attr('data-minquantity')) < 0) return process_product_out_of_quantity(true, parent_card);
+                //if (parseInt(parent_card.attr('data-maxquantity')) - parseInt(parent_card.attr('data-minquantity')) < 0) return process_product_out_of_quantity(true, parent_card);
                 alert(`${quantity} ${parent_card.attr('data-orderunitname')} of ${parent_card.attr('data-name')} ${quantity > 1 ? 'have' : 'has'} been added to your cart`);
             }
         });
@@ -538,7 +553,7 @@ $(document).ready(function(){
                 let product_vendor_maps = [];
                 let idx = 0;
 
-                function retrieve_single_product_vendor_map(product_uid){
+                function retrieve_product_vendor_map(product_uid){
                     function _finalise_request(){
                         if (idx < products.length - 1) return idx++;
                         disable_button(APPLY_SEARCH_BTN, false, 'Apply Search');
@@ -546,6 +561,7 @@ $(document).ready(function(){
                         // Assign product-vendor map attributes to each product object accordingly
                         // with empty cart item to indicate the object should be rendered as a product
                         // catalogue card
+                        
                         const formatted_products = process_product_vendor_map(products, product_vendor_maps);
                         if (formatted_products.length < 1) return _empty_result_handling();
 
@@ -566,11 +582,12 @@ $(document).ready(function(){
                         timeout: AJAX_TIMEOUT_DURATION,
                         data: JSON.stringify({'product_uid': product_uid}),
                         complete: function(response, status, xhr){
-                            if (String(status) !== 'success') return _finalise_request();
-                            const product_vendor_map = response['responseJSON']['product_vendor_map'][0];
-                            if (product_vendor_map === undefined) return _finalise_request();
-                            product_vendor_maps.push(product_vendor_map);
                             _finalise_request();
+                        },
+                        success: function(response, status, xhr){
+                            response.product_vendor_maps.forEach(product_vendor_map => {
+                                product_vendor_maps.push(product_vendor_map);
+                            });
                         }
                     });
                 }
@@ -578,7 +595,7 @@ $(document).ready(function(){
                 products.forEach(product => {
                     (function(y) {
                         setTimeout(function() {
-                            retrieve_single_product_vendor_map(product['prg_uomprocurementserviceproductsid']);
+                            retrieve_product_vendor_map(product['prg_uomprocurementserviceproductsid']);
                             }, y * 250);    // Perform POST Request for each Product object asynchronously
                         }(idx));
                 });
@@ -751,8 +768,9 @@ $(document).ready(function(){
 
                     cart_item_grid_elem.attr('data-numincart', input_val);
                     cart_item_grid_elem.attr('data-totalprice', cart_item_price);
-                    cart_item_grid_elem.attr('data-vendorstockordered', response['responseJSON']['product_vendor_map']['prg_stockorderd']);
-                    const new_max_quantity = response['responseJSON']['product_vendor_map']['prg_stockonhand'] - response['responseJSON']['product_vendor_map']['prg_stockorderd'] + input_val;
+                    //cart_item_grid_elem.attr('data-vendorstockordered', response['responseJSON']['product_vendor_map']['prg_stockorderd']);
+                    //const new_max_quantity = response['responseJSON']['product_vendor_map']['prg_stockonhand'] - response['responseJSON']['product_vendor_map']['prg_stockorderd'] + input_val;
+                    const new_max_quantity = response['responseJSON']['product_vendor_map']['prg_stockonhand'];
                     cart_item_grid_elem.attr('data-maxquantity', new_max_quantity);
                     input_field.attr('data-maxquantity', new_max_quantity);
                     if (input_val < 1 && update_cart_item['update_success']) cart_item_grid_elem.remove();
@@ -782,8 +800,9 @@ $(document).ready(function(){
         let cart_items = [];
         CART_CONTAINER_MODAL.find('.product-card').each(function(){
             if (parseInt($(this).attr('data-fromcart')) === 1 && 
-                parseInt($(this).attr('data-numincart')) >= parseInt($(this).attr('data-minquantity')) &&
-                parseInt($(this).attr('data-numincart')) <= parseInt($(this).attr('data-maxquantity'))) cart_items.push({'uid': $(this).attr('data-cartuid')});   
+                parseInt($(this).attr('data-numincart')) >= parseInt($(this).attr('data-minquantity')) 
+                //&& parseInt($(this).attr('data-numincart')) <= parseInt($(this).attr('data-maxquantity'))
+                ) cart_items.push({'uid': $(this).attr('data-cartuid')});   
         });
         if (cart_items.length < 1) return handle_cart_change_btn_event(calling_btn, false);
 

@@ -1,10 +1,11 @@
-const AJAX_TIMEOUT_DURATION = 864000000;
 const CUSTOMER_UID = 'e391c7cb-e9c7-ed11-b597-00224897d329';
+const AJAX_TIMEOUT_DURATION = 864000000;
 const PLACE_HOLDER_IMG_URL = 'https://i.ibb.co/VMPPhzc/place-holder-catering-item-img.webp';
 
 const APPLY_FILTER_BTN = $('button[name=apply-search-filter-btn]');
 const CLEAR_FILTER_BTN = $('button[name=clear-search-filter-btn]');
 const PRODUCT_SEARCH_TEXT_FIELD = $('input[name=product-search-input-field]');
+const APPLY_ORDER_INFO_CHANGES_BTN = $('button[name=apply-order-info-changes-btn]');
 
 const BSTR_BORDER_SPINNER = `<div class="spinner-border" role="status">
                                 <span class="visually-hidden">Loading...</span>
@@ -12,6 +13,7 @@ const BSTR_BORDER_SPINNER = `<div class="spinner-border" role="status">
 const PROGRESS_BAR_DOM = $('div[name=request-loader-progress-bar]');
 const ORDER_HISTORY_TABLE = $('table[name=order-history-table]');
 
+const DATE_RANGE_PICKER_CLASS = $('.date-range-picker-input');
 const ORDER_DATE_FILTER_DROPDOWN = $('input[name="order-date-range"]');
 const VENDOR_FILTER_DROPDOWN = $('ul[name=vendor-filter-opts]');
 const PRODUCT_FILTER_DROPDOWN = $('ul[name=product-filter-opts]');
@@ -35,13 +37,19 @@ const SUBCATEGORY_ORDER_STAT_CONTAINER = $('div[name=order-subcategory-stat-cont
 const WEEK_OF_YR_ORDER_STAT_CONTAINER = $('div[name=order-weekofyear-stat-container]');
 
 const ORDER_STATUS_FILTER_OPTS = [
-    {'value': 1, 'label': 'Awaiting', 'colour': '#0067B9'},
-    {'value': 2, 'label': 'Approved', 'colour': '#84BD00'},
-    {'value': 3, 'label': 'Rejected', 'colour': 'red'},
-    {'value': 4, 'label': 'Shipped', 'colour': '#FFCD00'},
-    {'value': 5, 'label': 'Delivered', 'colour': '#F57F25'},
-    {'value': 6, 'label': 'Cancelled', 'colour': '#B0008E'},
+    {'value': 1, 'label': 'Ordered', 'colour': '#0067B9', 'selectable': false, 'text_color': 'white'},
+    {'value': 2, 'label': 'Approved', 'colour': '#84BD00', 'selectable': false, 'text_color': 'white'},
+    {'value': 3, 'label': 'Rejected', 'colour': '#F57F25', 'selectable': false, 'text_color': 'white'},
+    {'value': 4, 'label': 'Received In-Full', 'colour': '#B0008E', 'selectable': true, 'text_color': 'white'},
+    {'value': 5, 'label': 'Partially Received', 'colour': '#FFCD00', 'selectable': true, 'text_color': '#3D3935'},
+    {'value': 6, 'label': 'Cancelled', 'colour': '#E9E9E9', 'selectable': false, 'text_color': '#3D3935'},
+    {'value': 7, 'label': 'Error', 'colour': 'red', 'selectable': true, 'text_color': 'white'},
+    {'value': 8, 'label': 'Awaiting', 'colour': '#0C2340', 'selectable': false, 'text_color': 'white'},
+    {'value': 9, 'label': 'Closed', 'colour': '#D7DF23', 'selectable': false, 'text_color': 'white'},
 ];
+
+const APPROVED_ORDER_STATUS_CODES = [2, 4, 5, 7];
+const ELIGIBLE_TICKET_STATUS_CODES = [1, 2, 4, 5, 7, 8];
 
 const PAYMENT_STATUS_FILTER_OPTS = [
     {'value': 0, 'label': 'Pending Payment', 'colour': '#0067B9'},
@@ -63,8 +71,18 @@ const ST_WRONG_ORDER_BTN = $('button[name=st-wrong-order-btn]');
 const ORDER_TICKET_FORM_MODAL = $('div[name=issue-order-ticket-modal]');
 const ORDER_TICKET_TITLE_INPUT = $('input[name=order-issue-ticket-title-input]');
 const ORDER_TICKET_DESC_INPUT = $('input[name=order-issue-ticket-desc-input]');
+const DISABLED_ELEM_CLASS = 'disabled-element';
+const TODAY_DATE = new Date();
+const ONE_MONTH_AGO = new Date();
+ONE_MONTH_AGO.setMonth(TODAY_DATE.getMonth() - 1);
 
 /*Util Functions*/
+function get_user_id(){
+    const elem_user_id = '{{user.id}}';
+    return elem_user_id.includes('{{') && elem_user_id.includes('}}') ? undefined : elem_user_id;
+    //return elem_user_id.includes('{{') && elem_user_id.includes('}}') ? null : elem_user_id;
+}
+
 function clean_white_space(input_string, all=true){
     return input_string.replace(/\s+/g, all ? '' : ' ');
 }
@@ -130,10 +148,49 @@ function _get_text_padding(max_length, curr_txt, html_tag='span'){
     return `<${html_tag} id='text-padding'>${'#'.repeat(max_length - curr_txt.length)}</${html_tag}>`;
 }
 
+function verify_integer_input(integer_input, place_holder='', min_value=Number.NEGATIVE_INFINITY, max_value=Number.POSITIVE_INFINITY){
+    // Format an Input text Field's value to integers and verify whether the resulting integer
+    // is within the min max range. If the value is out of range assign it with min or max value
+    let valid_input = true;
+    let curr_value = integer_input.val();
+    if (!integer_input.val() || is_whitespace(curr_value)) return valid_input;
+    curr_value = parseInt(curr_value.replace(/\D/g, ''));
+    if (isNaN(curr_value)){
+        integer_input.val(null);
+        return false;
+    }
+    if (curr_value < min_value) curr_value = min_value;
+    if (curr_value > max_value) curr_value = max_value;
+    integer_input.val(curr_value);
+    return curr_value >= min_value;
+}
+
 function is_json_data_empty(data){
     if ([null, undefined].includes(data)) return true;
     if (typeof data == 'string') return is_whitespace(data);
     return false;
+}
+
+function group_arr_of_objs(arr, key_name){
+    const grouped_data = arr.reduce((result, item) => {
+        const key = item[`${key_name}`];
+        
+        // Check if there is already an array for this key, if not, create one
+        if (!result[key]) {
+          result[key] = [];
+        }
+        
+        // Push the item into the array corresponding to its key
+        result[key].push(item);
+        
+        return result;
+    }, {});
+    return Object.keys(grouped_data).map((key) => {
+        return {
+          key: key,
+          grouped_objects: grouped_data[key],
+        };
+    });
 }
 
 function hide_elems_on_load(complete=false){
@@ -149,6 +206,11 @@ function disable_button(button_dom, disabled, replace_markup=null){
         button_dom.empty();
         button_dom.append(replace_markup);
     }
+}
+
+function disable_filter_elements(disabled=true, elem_markup=undefined){
+    const target_elems = elem_markup ?? $('div[name=mass-order-status-selection-opt-container]');
+    disabled ? target_elems.addClass(DISABLED_ELEM_CLASS) : target_elems.removeClass(DISABLED_ELEM_CLASS);
 }
 
 
@@ -186,11 +248,29 @@ function date_to_week_str(date) {
     return `Week ${get_week_of_year(date)} - ${date.getFullYear()}`;
 }
 
+
+function set_dt_to_week_begin_end(datetime, end=false){
+    const day_of_week = datetime.getDay();
+    let num_days_from_the_end = day_of_week === 0 ? 6 : day_of_week - 1;
+    if (end) num_days_from_the_end = day_of_week === 0 ? 0 : 7 - day_of_week;
+    if (!end){
+        datetime.setDate(datetime.getDate() - num_days_from_the_end);
+        datetime.setHours(0, 0, 0, 0); // Set the time to 00:00:00
+    }else{
+        datetime.setDate(datetime.getDate() + num_days_from_the_end);
+        datetime.setHours(23, 59, 59, 999); // Set the time to 23:59:59.999
+    }
+}
+
 function get_weeks_in_range(min_date, max_date) {
     const week_in_range = [];
+
+    let end_date = new Date(max_date);
     let curr_date = new Date(min_date);
+    set_dt_to_week_begin_end(end_date, true);
+    set_dt_to_week_begin_end(curr_date);
   
-    while (curr_date <= max_date) {
+    while (curr_date <= end_date) {
       week_in_range.push(date_to_week_str(curr_date));
       // Move to the next week
       curr_date.setDate(curr_date.getDate() + 7);
@@ -248,8 +328,8 @@ function render_loading_progress_bar(curr_progress=0){
 /*End of Util functions*/
 
 
-function render_filter_options(dropdown_container, filter_opts){
-    filter_opts = filter_opts.sort((a, b) => a.label.localeCompare(b.label));
+function render_filter_options(dropdown_container, filter_opts, sort_by_label=false){
+    if (sort_by_label) filter_opts = filter_opts.sort((a, b) => a.label.localeCompare(b.label));
     filter_opts.forEach(filter_opt => {
         dropdown_container.append(`
         <div class='dropdown-item'>
@@ -270,51 +350,86 @@ function set_up_date_range_picker(date_input, min_date, max_date){
     date_input.val(`${date_input.attr('data-start')} - ${date_input.attr('data-end')}`);
 }
 
+function is_purchase_request_editable(orders_grouped_by_request){
+    return !orders_grouped_by_request.map(formatted_uom_order => formatted_uom_order.is_beyond_approved).includes(false);
+}
 
-function render_order_history_data_row(sort_latest=true){
-    if (sort_latest) FORMATTED_UOM_ORDERS = FORMATTED_UOM_ORDERS.sort((a, b) => new Date(b.createdon) - new Date(a.createdon));
-    FORMATTED_UOM_ORDERS.forEach(formatted_uom_order => {
-        if (formatted_uom_order.est_price < 1) return;
-        ORDER_HISTORY_TABLE.find('tbody').eq(0).append(`
-        <tr class='data-row' name='${ORDER_HISTORY_TABLE.attr('name')}-row'
-            data-orderuid='${formatted_uom_order.order_uid}' data-ordercode='${formatted_uom_order.order_code}' data-ordercodetrimmed='${formatted_uom_order.order_code_trimmed}'
-            data-customeruid='${formatted_uom_order.customer_uid}' data-customername='${formatted_uom_order.customer_name}'
-            data-productuid='${formatted_uom_order.product_uid}' data-productname='${formatted_uom_order.product_name}' data-productnametrimmed='${formatted_uom_order.trimmed_product_name}'
-            data-vendormapocode='${formatted_uom_order.vendor_map_code}' data-vendormapuid='${formatted_uom_order.vendor_map_uid}'
-            data-barcode='${formatted_uom_order.product_barcode}' data-brand='${formatted_uom_order.brand_name}' data-brandcode='${formatted_uom_order.brand_code}'
-            data-orderunitname='${formatted_uom_order.order_unit_name}' data-orderunitcode='${formatted_uom_order.order_unit_code}'
-            data-unitsize='${formatted_uom_order.unit_size}' data-productsize='${formatted_uom_order.product_size}'
-            data-categoryname='${formatted_uom_order.category_name}' data-categoryuid='${formatted_uom_order.category_uid}'
-            data-subcategoryname='${formatted_uom_order.subcategory_name}' data-subcategoryuid='${formatted_uom_order.subcategory_uid}'
-            data-vendorname='${formatted_uom_order.vendor_name}' data-vendoruid='${formatted_uom_order.vendor_uid}'
-            data-weekofyr='${formatted_uom_order.week_of_year_str}' data-weekofyrtrimmed='${clean_white_space(formatted_uom_order.week_of_year_str.trim().toLowerCase())}'
-            data-createdon='${formatted_uom_order.createdon}' data-createdonstr='${formatted_uom_order.createdon_str}'
-            data-refunddate='${formatted_uom_order.refund_on_dt}' data-refunddatestr='${formatted_uom_order.refund_on_str}'
-            data-payondate='${formatted_uom_order.paid_on_dt}' data-payondatestr='${formatted_uom_order.paid_on_str}'
-            data-shipeddt='${formatted_uom_order.shipped_dt}' data-shipeddtstr='${formatted_uom_order.shipped_str}'
-            data-delivereddt='${formatted_uom_order.delivered_dt}' data-delivereddtstr='${formatted_uom_order.delivered_str}'
-            data-spent='${formatted_uom_order.est_price}' data-stockordered='${formatted_uom_order.stock_ordered}'
-            data-orderstatuscode='${formatted_uom_order.order_status_code}' data-orderstatus='${formatted_uom_order.order_status}'
-            data-paymentstatuscode='${formatted_uom_order.payment_status_code}' data-paymentstatus='${formatted_uom_order.payment_status}'
-            data-requestuid='${formatted_uom_order.request_uid}' data-requestcode='${formatted_uom_order.request_code}'
-        >
-            <!--<td scope="row"><span class="material-symbols-rounded product-info-btn" name='product-info-btn'>info</span></td>-->
-            <td scope="row">
-                <div class='image-container' name='product-info-btn'>
-                    <img src='${formatted_uom_order.thumbnail_img}'/>
+
+function render_order_history_data_row(sort_latest=true, data_list=undefined){
+    let formatted_uom_orders = data_list ?? FORMATTED_UOM_ORDERS;
+    if (sort_latest) formatted_uom_orders = formatted_uom_orders.sort((a, b) => new Date(b.createdon) - new Date(a.createdon));
+    
+    group_arr_of_objs(formatted_uom_orders, 'request_uid').forEach(order_grouped_by_request => 
+        order_grouped_by_request.grouped_objects.forEach((formatted_uom_order, order_idx) => {
+            const received_quantity_input_field = formatted_uom_order.is_beyond_approved ? `<input maxlength='${String(formatted_uom_order.stock_ordered).length + 1}' class='product-quantity-input-field integer-input border-effect' type='text' placeholder='${formatted_uom_order.received_quantity}' name="product-quantity-input-field" value='${formatted_uom_order.received_quantity}'/>` : formatted_uom_order.received_quantity;
+            const correspond_order_status_obj = ORDER_STATUS_FILTER_OPTS.filter(data => data.value === formatted_uom_order.order_status_code)[0];
+
+            const order_status_selection_dropdown_markup = formatted_uom_order.is_beyond_approved ? 
+            `<ul class='dropdown-menu dropdown-menu-end' aria-labelledby='navbarDropdown' onclick='event.stopPropagation()'>
+                ${ORDER_STATUS_FILTER_OPTS.filter(data => data.selectable).map(data => `
+                    <div class='dropdown-item'>
+                        <input class='form-check-input filter-opt-radio' type='radio' data-value='${data.value}' data-label='${data.label}' data-backgroundcolour='${data.colour}' data-textcolour='${data.text_color}' name='order-status-change-radio'>
+                        <label class='form-check-label'>${data.label}</label>
+                    </div> 
+                `).join('<hr>\n')}
+            </ul>` : ''; 
+            
+            const order_status_selection_dropdown = `
+                <div class='opt-selection-btn' id='sort-container' style='background-color: ${correspond_order_status_obj.colour}; color: ${correspond_order_status_obj.text_color}' name='single-order-status-selection-opt-btn'>
+                    <a class='nav-link' role='button' data-bs-toggle='dropdown' aria-expanded='false'>${formatted_uom_order.order_status}</a>
+                    ${order_status_selection_dropdown_markup}
                 </div>
-            </td>
-            <td scope="row">${formatted_uom_order.order_code}</td>
-            <td scope="row">${formatted_uom_order.product_name}</td>
-            <td scope="row">${formatted_uom_order.vendor_name}</td>
-            <td scope="row">${formatted_uom_order.stock_ordered}</td>
-            <td scope="row" style='font-weight: 500;'>$${formatted_uom_order.est_price.toFixed(2)}</td>
-            <td scope="row">${formatted_uom_order.createdon_str}</td>
-            <td scope="row">${formatted_uom_order.payment_status}</td>
-            <td scope="row">${formatted_uom_order.order_status}</td>
-            <td hidden scope='row'><textarea class='product-remark-container' disabled hidden>${formatted_uom_order.product_remark}</textarea></td>
-        </tr>`)
-    });
+            `;
+            ORDER_HISTORY_TABLE.find('tbody').eq(0).append(`
+            <tr class='data-row' name='${ORDER_HISTORY_TABLE.attr('name')}-row'
+                data-orderuid='${formatted_uom_order.order_uid}' data-ordercode='${formatted_uom_order.order_code}' data-ordercodetrimmed='${formatted_uom_order.order_code_trimmed}'
+                data-customeruid='${formatted_uom_order.customer_uid}' data-customername='${formatted_uom_order.customer_name}'
+                data-productuid='${formatted_uom_order.product_uid}' data-productname='${formatted_uom_order.product_name}' data-productnametrimmed='${formatted_uom_order.trimmed_product_name}'
+                data-vendormapocode='${formatted_uom_order.vendor_map_code}' data-vendormapuid='${formatted_uom_order.vendor_map_uid}'
+                data-barcode='${formatted_uom_order.product_barcode}' data-brand='${formatted_uom_order.brand_name}' data-brandcode='${formatted_uom_order.brand_code}'
+                data-orderunitname='${formatted_uom_order.order_unit_name}' data-orderunitcode='${formatted_uom_order.order_unit_code}'
+                data-unitsize='${formatted_uom_order.unit_size}' data-productsize='${formatted_uom_order.product_size}'
+                data-categoryname='${formatted_uom_order.category_name}' data-categoryuid='${formatted_uom_order.category_uid}'
+                data-subcategoryname='${formatted_uom_order.subcategory_name}' data-subcategoryuid='${formatted_uom_order.subcategory_uid}'
+                data-vendorname='${formatted_uom_order.vendor_name}' data-vendoruid='${formatted_uom_order.vendor_uid}'
+                data-weekofyr='${formatted_uom_order.week_of_year_str}' data-weekofyrtrimmed='${clean_white_space(formatted_uom_order.week_of_year_str.trim().toLowerCase())}'
+                data-createdon='${formatted_uom_order.createdon}' data-createdonstr='${formatted_uom_order.createdon_str}'
+                data-refunddate='${formatted_uom_order.refund_on_dt}' data-refunddatestr='${formatted_uom_order.refund_on_str}'
+                data-payondate='${formatted_uom_order.paid_on_dt}' data-payondatestr='${formatted_uom_order.paid_on_str}'
+                data-shipeddt='${formatted_uom_order.shipped_dt}' data-shipeddtstr='${formatted_uom_order.shipped_str}'
+                data-delivereddt='${formatted_uom_order.delivered_dt}' data-delivereddtstr='${formatted_uom_order.delivered_str}'
+                data-spent='${formatted_uom_order.est_price}' data-stockordered='${formatted_uom_order.stock_ordered}'
+                data-receivedquantity='${formatted_uom_order.received_quantity}'
+                data-orderstatuscode='${formatted_uom_order.order_status_code}' data-orderstatus='${formatted_uom_order.order_status}' data-ogorderstatuscode='${formatted_uom_order.order_status_code}'
+                data-paymentstatuscode='${formatted_uom_order.payment_status_code}' data-paymentstatus='${formatted_uom_order.payment_status}'
+                data-requestuid='${formatted_uom_order.request_uid}' data-requestcode='${formatted_uom_order.request_code}'
+            >
+                <!--<td scope="row"><span class="material-symbols-rounded product-info-btn" name='product-info-btn'>info</span></td>-->
+                ${order_idx === 0 ? `
+                <th scope="row" rowspan="${order_grouped_by_request.grouped_objects.length}" class='span-grouped-row'>
+                    ${is_purchase_request_editable(order_grouped_by_request.grouped_objects) ? `<input class='form-check-input filter-opt-radio' type='checkbox' name='select-uom-request-data-checkbox'/>` : ''}
+                </th>
+                <th scope="row" rowspan="${order_grouped_by_request.grouped_objects.length}" class='span-grouped-row'>${formatted_uom_order.request_code}</th>
+                ` : ''}
+                <td scope="row">
+                    <div class='image-container' name='product-info-btn'>
+                        <img src='${formatted_uom_order.thumbnail_img}'/>
+                    </div>
+                </td>
+                <td scope="row">${formatted_uom_order.vendor_map_code}</td>
+                <td scope="row">${formatted_uom_order.product_name}</td>
+                <td scope="row">${formatted_uom_order.vendor_name}</td>
+                <td scope="row">${formatted_uom_order.stock_ordered}</td>
+                <td scope="row">${received_quantity_input_field}</td>
+                <td scope="row">${formatted_uom_order.unit_size} ${formatted_uom_order.order_unit_name}</td>
+                <td scope="row" style='font-weight: 500;'>$${formatted_uom_order.est_price.toFixed(2)}</td>
+                <td scope="row">${order_status_selection_dropdown}</td>
+                <td scope="row">${formatted_uom_order.payment_status}</td>
+                <td scope="row">${formatted_uom_order.createdon_str}</td>
+                <td hidden scope='row'><textarea class='product-remark-container' disabled hidden>${formatted_uom_order.product_remark}</textarea></td>
+            </tr>`);
+        })
+    );
 }
 
 function render_body_content(){
@@ -357,9 +472,10 @@ function render_body_content(){
                     formatted_uom_order['thumbnail_img'] = is_json_data_empty(product.prg_img_url) ? PLACE_HOLDER_IMG_URL : product.prg_img_url,
                     formatted_uom_order['product_remark']= product.prg_remarks ?? '';
                     formatted_uom_order['bulk_order_unit_code'] = is_json_data_empty(product.prg_bulkorder) ? 0 : product.prg_bulkorder,
-                    formatted_uom_order['bulk_order_unit_name'] = is_json_data_empty(product.prg_bulkorder) ? 'N/A' : product['prg_bulkorder@OData.Community.Display.V1.FormattedValue'],
+                    formatted_uom_order['bulk_order_unit_name'] = is_json_data_empty(product.prg_bulkorder) ? 'N/A' : product['prg_bulkorder@OData.Community.Display.V1.FormattedValue'];
 
-                    FORMATTED_UOM_ORDERS.push(formatted_uom_order);
+                    // Only append valid order with a formatted est price
+                    if (formatted_uom_order.est_price > 0) FORMATTED_UOM_ORDERS.push(formatted_uom_order);
                 }
 
                 function _finalise_request(incr=true){
@@ -369,6 +485,14 @@ function render_body_content(){
                     
                     sleep(10000);
                     console.log(FORMATTED_UOM_ORDERS);
+                    ORDER_STATUS_FILTER_OPTS.filter(data => data.selectable).forEach(data => {
+                        $('div[name=mass-order-status-selection-opt-container]').append(`
+                            <div class='filter-container opt-selection-btn' id='sort-container' style='background-color: ${data.colour}; color: ${data.text_color}'
+                                name='mass-order-status-selection-opt-btn' data-value='${data.value}' data-label='${data.label}'>
+                                <a class='nav-link' data-bs-toggle='dropdown' aria-expanded='false'>${data.label}</a>
+                            </div>
+                        `);
+                    });
 
                     FORMATTED_UOM_ORDERS.forEach(uom_order => {
                         if (brand_filter_options.length < 0 || !brand_filter_options.map(item => item.value).includes(uom_order.brand_code)) brand_filter_options.push({'value': uom_order.brand_code, 'label': uom_order.brand_name});
@@ -383,7 +507,7 @@ function render_body_content(){
                     set_up_date_range_picker(ORDER_DATE_FILTER_DROPDOWN, min, max);
 
                     render_filter_options(BRAND_FILTER_DROPDOWN, brand_filter_options);
-                    render_filter_options(PRODUCT_FILTER_DROPDOWN, product_filter_options);
+                    render_filter_options(PRODUCT_FILTER_DROPDOWN, product_filter_options, true);
                     render_filter_options(CATEGORY_FILTER_DROPDOWN, category_filter_options);
                     render_filter_options(SUBCATEGORY_FILTER_DROPDOWN, subcategory_filter_options);
                     render_filter_options(VENDOR_FILTER_DROPDOWN, vendor_filter_options);
@@ -393,9 +517,13 @@ function render_body_content(){
                     render_chart_js_content();
                     render_order_history_data_row();
                     hide_elems_on_load(true);
+                    $('#sort-by-createdon-desc').prop('checked', true);
+                    disable_filter_elements();
                 }
 
                 function format_uom_order(uom_order){
+                    const request_createdon_dt = new Date(uom_request.createdon) ;
+                    const is_request_createdon_within_one_month = request_createdon_dt >= ONE_MONTH_AGO;
                     let formatted_uom_order = {
                         'order_code': `${uom_request.crcfc_requestcode}-${uom_order['_prg_vendorcode_value@OData.Community.Display.V1.FormattedValue']}`,
                         'order_code_trimmed': clean_white_space(`${uom_request.crcfc_requestcode}-${uom_order['_prg_vendorcode_value@OData.Community.Display.V1.FormattedValue']}`.trim().toLowerCase()),
@@ -404,14 +532,15 @@ function render_body_content(){
                         'vendor_map_code': uom_order['_prg_vendorcode_value@OData.Community.Display.V1.FormattedValue'],
                         'request_uid': uom_request.crcfc_uomprocurementorderrequestid,
                         'request_code': uom_request.crcfc_requestcode,
-                        'createdon_str': format_dt(new Date(uom_request.createdon)),
-                        'createdon': uom_request.createdon,
+                        'createdon_str': format_dt(request_createdon_dt),
+                        'createdon': request_createdon_dt,
                         'vendor_name': uom_order['_prg_vendor_value@OData.Community.Display.V1.FormattedValue'],
                         'vendor_uid': uom_order['_prg_vendor_value'],
                         'product_name': uom_order['_prg_product_value@OData.Community.Display.V1.FormattedValue'],
                         'product_uid': uom_order['_prg_product_value'],
                         'est_price': uom_order['crcfc_est_price'],
                         'stock_ordered': uom_order.prg_stockordered,
+                        'received_quantity': uom_order.crcfc_received_quantity,
                         'payment_status_code': uom_order.crcfc_paymentstatus,
                         'payment_status': uom_order['crcfc_paymentstatus@OData.Community.Display.V1.FormattedValue'],
                         'order_status_code': uom_order['prg_orderstatus'],
@@ -427,6 +556,8 @@ function render_body_content(){
                         'customer_uid': uom_order['_prg_customer_value'],
                         'customer_name': uom_order['_prg_customer_value@OData.Community.Display.V1.FormattedValue'],
 
+                        'is_beyond_approved': APPROVED_ORDER_STATUS_CODES.includes(uom_order['prg_orderstatus']) && is_request_createdon_within_one_month,
+                        'allow_ticket_raised': ELIGIBLE_TICKET_STATUS_CODES.includes(uom_order['prg_orderstatus']) && is_request_createdon_within_one_month,
                         'week_of_year_str': date_to_week_str(uom_order.createdon),
                     };
                     $.ajax({
@@ -463,7 +594,6 @@ function render_body_content(){
                                     }, y * 350);
                                 }(uom_order_idx));
                         });
-                        //format_uom_orders(uom_orders);
                     }
                 });
             }
@@ -483,6 +613,7 @@ function render_body_content(){
 
 
 function render_chart_js_content(no_filter=true){
+    const _min_height_enfore = `style='min-height: 500px !important;'`
     $('section[name=order-stat-container-section]').find('.removable-item').each(function(){
         $(this).remove();
     });
@@ -496,10 +627,9 @@ function render_chart_js_content(no_filter=true){
     const filtered_order_opts = get_selected_filter_values(`${ORDER_STATUS_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
     let {min_date, max_date} = get_daterange_input_val(ORDER_DATE_FILTER_DROPDOWN);
     const filtered_week_of_year_arr = get_weeks_in_range(min_date, max_date);
-
     const searched_txt = !$('input[name=product-search-input-field]').val() || is_whitespace($('input[name=product-search-input-field]').val()) ? '' : clean_white_space($('input[name=product-search-input-field]').val().toLowerCase().trim());
 
-    let filtered_uom_orders = no_filter ? FORMATTED_UOM_ORDERS : FORMATTED_UOM_ORDERS.filter(uom_order => 
+    const filtered_uom_orders = no_filter ? FORMATTED_UOM_ORDERS : FORMATTED_UOM_ORDERS.filter(uom_order => 
         (uom_order.trimmed_product_name.includes(searched_txt) || uom_order.order_code_trimmed.includes(searched_txt)) &&
         filtered_subcategories.includes(uom_order.subcategory_uid) && filtered_categories.includes(uom_order.category_uid) &&
         filtered_products.includes(uom_order.product_uid) &&
@@ -540,7 +670,7 @@ function render_chart_js_content(no_filter=true){
 
         }
     });
-    const payment_status_stat_canvas = `<canvas id='payment_status_stat_canvas' class='pm-stat-item'></canvas>`;
+    const payment_status_stat_canvas = `<canvas id='payment_status_stat_canvas' class='pm-stat-item' style='min-height: 500px !important;'></canvas>`;
     PAYMENT_ORDER_STATUS_STAT_CONTAINER.append(`
     <div class='stat-item-container removable-item'>
         ${payment_status_stat_canvas}
@@ -586,24 +716,35 @@ function render_chart_js_content(no_filter=true){
                     data: vendor_filter_options.map(item => get_sum_num_arr(filtered_uom_orders.filter(uom_order => uom_order.vendor_uid === item.value).map(uom_order => uom_order.est_price), 2)),
                     backgroundColor: ['#84BD00'],
                     borderColor: ['#84BD00'],
+                    fill: false,
                     hoverOffset: 4,
                     type: 'line',
                     yAxisID: 'spent',
                     
                 },
                 {
-                    label: 'Number of orders',
-                    data: vendor_filter_options.map(item => filtered_uom_orders.filter(uom_order => uom_order.vendor_uid === item.value).length),
+                    label: 'Stock Received',
+                    data: vendor_filter_options.map(item => get_sum_num_arr(filtered_uom_orders.filter(uom_order => uom_order.vendor_uid === item.value).map(uom_order => uom_order.received_quantity))),
+                    hoverOffset: 4,
+                    backgroundColor: ['#0067B9'],
+                    borderColor: ['#0067B9'],
+                    type: 'bar',
+                    yAxisID: 'quantity',
+                },
+                {
+                    label: 'Stock Ordered',
+                    data: vendor_filter_options.map(item => get_sum_num_arr(filtered_uom_orders.filter(uom_order => uom_order.vendor_uid === item.value).map(uom_order => uom_order.stock_ordered))),
                     hoverOffset: 4,
                     backgroundColor: ['#bfd9ee'],
                     borderColor: ['#bfd9ee'],
                     type: 'bar',
                     yAxisID: 'quantity',
-                }],
+                },
+            ],
         },
         options: {
             responsive: true,
-            //maintainAspectRatio: false,
+            maintainAspectRatio: false,
             plugins: {
                 title: {
                     display: true,
@@ -624,16 +765,18 @@ function render_chart_js_content(no_filter=true){
                       },
                 },
                 quantity:{
+                    //stacked: true,
                     beginAtZero: true,
                     position: 'left',
                     y: {
                         title: {
                             display: true,
-                            text: 'Number of orders'
+                            text: 'Stock Ordered'
                         },
                       },
                 },
                 x: {
+                //stacked: true,
                   grid: {
                     display:false,  // hide vertical grid lines
                   },
@@ -664,8 +807,8 @@ function render_chart_js_content(no_filter=true){
                     
                 },
                 {
-                    label: 'Number of orders',
-                    data: category_filter_options.map(item => filtered_uom_orders.filter(uom_order => uom_order.category_uid === item.value).length),
+                    label: 'Stock Ordered',
+                    data: category_filter_options.map(item => get_sum_num_arr(filtered_uom_orders.filter(uom_order => uom_order.category_uid === item.value).map(uom_order => uom_order.stock_ordered))),
                     hoverOffset: 4,
                     backgroundColor: ['#86919f'],
                     borderColor: ['#86919f'],
@@ -701,7 +844,7 @@ function render_chart_js_content(no_filter=true){
                     y: {
                         title: {
                             display: true,
-                            text: 'Number of orders'
+                            text: 'Stock Ordered'
                         },
                       },
                 },
@@ -736,8 +879,8 @@ function render_chart_js_content(no_filter=true){
                     
                 },
                 {
-                    label: 'Number of orders',
-                    data: subcategory_filter_options.map(item => filtered_uom_orders.filter(uom_order => uom_order.subcategory_uid === item.value).length),
+                    label: 'Stock Ordered',
+                    data: subcategory_filter_options.map(item => get_sum_num_arr(filtered_uom_orders.filter(uom_order => uom_order.subcategory_uid === item.value).map(uom_order => uom_order.stock_ordered))),
                     hoverOffset: 4,
                     backgroundColor: ['#ebef92'],
                     borderColor: ['#ebef92'],
@@ -773,7 +916,7 @@ function render_chart_js_content(no_filter=true){
                     y: {
                         title: {
                             display: true,
-                            text: 'Number of orders'
+                            text: 'Stock Ordered'
                         },
                       },
                 },
@@ -808,8 +951,17 @@ function render_chart_js_content(no_filter=true){
                     
                 },
                 {
-                    label: 'Number of orders',
-                    data: week_of_yr_data.map(item => filtered_uom_orders.filter(uom_order => uom_order.week_of_year_str === item.value && filtered_week_of_year_arr.includes(uom_order.week_of_year_str)).length),
+                    label: 'Stock Received',
+                    data: week_of_yr_data.map(item => get_sum_num_arr(filtered_uom_orders.filter(uom_order => uom_order.week_of_year_str === item.value && filtered_week_of_year_arr.includes(uom_order.week_of_year_str)).map(uom_order => uom_order.received_quantity))),
+                    hoverOffset: 4,
+                    backgroundColor: ['#FA0A76'],
+                    borderColor: ['#FA0A76'],
+                    type: 'bar',
+                    yAxisID: 'quantity',
+                },
+                {
+                    label: 'Stock Ordered',
+                    data: week_of_yr_data.map(item => get_sum_num_arr(filtered_uom_orders.filter(uom_order => uom_order.week_of_year_str === item.value && filtered_week_of_year_arr.includes(uom_order.week_of_year_str)).map(uom_order => uom_order.stock_ordered))),
                     hoverOffset: 4,
                     backgroundColor: ['#d780c7'],
                     borderColor: ['#d780c7'],
@@ -823,7 +975,7 @@ function render_chart_js_content(no_filter=true){
             plugins: {
                 title: {
                     display: true,
-                    text: 'Subcategories'
+                    text: 'Weeks'
                 },
                 colors: {enabled: true,} //Auto colour
             },
@@ -845,7 +997,7 @@ function render_chart_js_content(no_filter=true){
                     y: {
                         title: {
                             display: true,
-                            text: 'Number of orders'
+                            text: 'Stock Ordered'
                         },
                       },
                 },
@@ -875,39 +1027,74 @@ function get_selected_filter_values(checkbox_name, to_int=false){
 function sort_items(sort_radio_dom){
     const _this_id = sort_radio_dom.attr('id');
     const _data_row = $(`tr[name=${ORDER_HISTORY_TABLE.attr('name')}-row]`);
+    let _formatted_uom_orders = [...FORMATTED_UOM_ORDERS];
+    if (_formatted_uom_orders.length < 1) return;
+
     if (_this_id == 'sort-by-product-name-asc'){
-        _data_row.sort(function(a, b){
-            return $(a).attr('data-productname').localeCompare($(b).attr('data-productname'))
-        }).appendTo(ORDER_HISTORY_TABLE);
+        _formatted_uom_orders = _formatted_uom_orders.sort((a, b) => a.product_name.localeCompare(b.product_name));
     }else if (_this_id == 'sort-by-product-name-desc'){
-        _data_row.sort(function(a, b){
-            return $(b).attr('data-productname').localeCompare($(a).attr('data-productname'))
-        }).appendTo(ORDER_HISTORY_TABLE);
+        _formatted_uom_orders = _formatted_uom_orders.sort((a, b) => b.product_name.localeCompare(a.product_name));
     }else if(_this_id == 'sort-by-price-asc'){
-        _data_row.sort(function(a, b){
-            return parseFloat($(a).attr('data-spent')) - parseFloat($(b).attr('data-spent'));
-        }).appendTo(ORDER_HISTORY_TABLE);
+        _formatted_uom_orders = _formatted_uom_orders.sort((a, b) => parseFloat(a.est_price) - parseFloat(b.est_price));
     }else if(_this_id == 'sort-by-price-desc'){
-        _data_row.sort(function(a, b){
-            return parseFloat($(b).attr('data-spent')) - parseFloat($(a).attr('data-spent'));
-        }).appendTo(ORDER_HISTORY_TABLE);
+        _formatted_uom_orders = _formatted_uom_orders.sort((a, b) => parseFloat(b.est_price) - parseFloat(a.est_price));
     }else if(_this_id == 'sort-by-quantity-asc'){
-        _data_row.sort(function(a, b){
-            return parseInt($(a).attr('data-stockordered')) - parseInt($(b).attr('data-stockordered'));
-        }).appendTo(ORDER_HISTORY_TABLE);
+        _formatted_uom_orders = _formatted_uom_orders.sort((a, b) => parseInt(a.stock_ordered) - parseInt(b.stock_ordered));
     }else if(_this_id == 'sort-by-quantity-desc'){
-        _data_row.sort(function(a, b){
-            return parseInt($(b).attr('data-stockordered')) - parseInt($(a).attr('data-stockordered'));
-        }).appendTo(ORDER_HISTORY_TABLE);
+        _formatted_uom_orders = _formatted_uom_orders.sort((a, b) => parseInt(b.stock_ordered) - parseInt(a.stock_ordered));
     }else if(_this_id == 'sort-by-createdon-desc'){
-        _data_row.sort(function(a, b){
-            return to_datetime($(b).attr('data-createdon')) - to_datetime($(a).attr('data-createdon'));
-        }).appendTo(ORDER_HISTORY_TABLE);
+        _formatted_uom_orders = _formatted_uom_orders.sort((a, b) => new Date(b.createdon) - new Date(a.createdon));
     }else if(_this_id == 'sort-by-createdon-asc'){
-        _data_row.sort(function(a, b){
-            return to_datetime($(a).attr('data-createdon')) - to_datetime($(b).attr('data-createdon'));
-        }).appendTo(ORDER_HISTORY_TABLE);
+        _formatted_uom_orders = _formatted_uom_orders.sort((a, b) => new Date(a.createdon) - new Date(b.createdon));
+    }else if (_this_id == 'sort-by-product-code-asc') {
+        _formatted_uom_orders = _formatted_uom_orders.sort((a, b) => a.vendor_map_code.localeCompare(b.vendor_map_code));
+    }else if (_this_id == 'sort-by-product-code-desc') {
+        _formatted_uom_orders = _formatted_uom_orders.sort((a, b) => b.vendor_map_code.localeCompare(a.vendor_map_code));
     }
+    _data_row.each(function(){
+        $(this).remove();
+    });
+    render_order_history_data_row(false, _formatted_uom_orders);
+}
+
+
+// Order detail changes function
+function process_order_status_opt_selection_btn(parent_tr, correspond_order_status_obj){
+    const order_status_selection_btn = parent_tr.find('div[name=single-order-status-selection-opt-btn]').eq(0);
+    order_status_selection_btn.find('.nav-link').text(correspond_order_status_obj.label);
+    order_status_selection_btn.css('background-color', correspond_order_status_obj.colour);
+    order_status_selection_btn.css('color', correspond_order_status_obj.text_color);
+
+    parent_tr.attr('data-orderstatuscode', correspond_order_status_obj.value);
+    parent_tr.attr('data-orderstatus', correspond_order_status_obj.label);
+}
+
+function process_order_status_opt_selection_input_field_val(parent_tr, correspond_order_status_obj){
+    const stock_ordered = parseInt(parent_tr.attr('data-stockordered'));
+    const par_recived_quantity = parseInt(parent_tr.find('input[name=product-quantity-input-field]').val());
+    const og_received_quantity = parseInt(parent_tr.find('input[name=product-quantity-input-field]').attr('placeholder'));
+
+    if (correspond_order_status_obj.value === 4){
+        // Received in Full
+        parent_tr.attr('data-receivedquantity', stock_ordered);
+        parent_tr.find('input[name=product-quantity-input-field]').val(stock_ordered);
+    }else if (correspond_order_status_obj.value === 5) {
+        // Partially Received 
+        let new_quantity = Math.min(...[stock_ordered, par_recived_quantity, og_received_quantity]);
+        if (new_quantity >= stock_ordered){
+            new_quantity = stock_ordered - 1;
+        }else{
+            if (par_recived_quantity < stock_ordered){
+                new_quantity = par_recived_quantity;
+            }else if (og_received_quantity < stock_ordered){
+                new_quantity = og_received_quantity;
+            }
+        }
+        parent_tr.attr('data-receivedquantity', new_quantity);
+        parent_tr.find('input[name=product-quantity-input-field]').val(new_quantity);
+    }
+
+    process_order_status_opt_selection_btn(parent_tr, correspond_order_status_obj);
 }
 
 
@@ -917,7 +1104,7 @@ $(document).ready(function(){
 
 
     //Filter function
-    $(document).on('keyup change', `${product_filter_checkbox_func_names}, input[name=sort-option-radio-checkbox], input[name=product-search-input-field]`, function(event){
+    $(document).on('keyup change', `${product_filter_checkbox_func_names}, input[name=sort-option-radio-checkbox], input[name=product-search-input-field], .search-text-field.filter-search-text-field`, function(event){
         let no_filter = true;
         FILTER_DROPDOWNS.forEach(dropdown => {
             no_filter = no_filter && $(`input[name=${dropdown.attr('name')}-checkbox]:checked`).length < 1;
@@ -977,6 +1164,7 @@ $(document).ready(function(){
         $(document).find('.form-check-input').attr('checked', false);
         ORDER_DATE_FILTER_DROPDOWN.val(`${parse_dt_str_and_obj(new Date(ORDER_DATE_FILTER_DROPDOWN.attr('min')), true)} - ${parse_dt_str_and_obj(new Date(ORDER_DATE_FILTER_DROPDOWN.attr('max')), true)}`);
 
+        $('#sort-by-createdon-desc').prop('checked', true);
         disable_button(CLEAR_FILTER_BTN, true, 'Clear Filters');
     });
 
@@ -994,6 +1182,10 @@ $(document).ready(function(){
         disable_button(CLEAR_FILTER_BTN, APPLY_FILTER_BTN.prop('disabled'));*/
     });
 
+    DATE_RANGE_PICKER_CLASS.on('keyup change', function(event){
+        $(this).val(`${$(this).attr('data-start')} - ${$(this).attr('data-end')}`);
+    });
+
 
     // Modal functions
     $(document).on('click', '.close-modal-btn', function(event){
@@ -1006,6 +1198,7 @@ $(document).ready(function(){
         if ($('button[name=send-order-ticket-btn]').attr('data-sendingrequest') === '1') return;
         const parent_card = $(this).closest('tr');
         targeted_uom_order = FORMATTED_UOM_ORDERS.filter(uom_order => uom_order.order_uid === parent_card.attr('data-orderuid'))[0];
+        if (targeted_uom_order === undefined) return;
         const payment_status_code = parseInt(parent_card.attr('data-paymentstatuscode'));
 
         let latest_payment_update_date = parent_card.attr('data-payondatestr');
@@ -1015,6 +1208,16 @@ $(document).ready(function(){
         const is_delivered = targeted_uom_order.delivered_dt !== undefined && targeted_uom_order.delivered_dt instanceof Date;
         $('div[name=product-info-modal]').find('.modal-title').text(parent_card.attr('data-productname'));
         $('div[name=product-info-modal]').find('.modal-body').empty();
+        $('div[name=product-info-modal]').find('.modal-footer').empty();
+
+        if (targeted_uom_order.allow_ticket_raised) {
+            $('div[name=product-info-modal]').find('.modal-footer').append(`
+            <button type='button' class='btn btn-primary' name='cancel-order-btn' data-btnlabel='Cancel Order'>Cancel Order</button>
+            <button type='button' class='btn btn-primary' name='request-return-order-btn' data-btnlabel='Issue Return'>Issue Return</button>
+            <button type='button' class='btn btn-primary' name='st-wrong-order-btn' data-btnlabel='Other Issues'>Other Issues</button>
+            `);
+        }
+
         $('div[name=product-info-modal]').find('.modal-footer').find('button').attr('disabled', targeted_uom_order === undefined);
 
         $('div[name=product-info-modal]').find('.modal-body').append(`
@@ -1022,6 +1225,7 @@ $(document).ready(function(){
                 <img src='${$(this).find('img').eq(0).attr('src')}' style='aspect-ratio: 1/1; max-width: 100%; height: auto;'></img>
             </div><br>
             ${get_product_info_markup('Request Code', parent_card.attr('data-requestcode'))}
+            ${get_product_info_markup('Order Code', parent_card.attr('data-ordercode'))}
             ${get_product_info_markup('Vendor Code', parent_card.attr('data-vendormapocode'))}
             ${is_whitespace(parent_card.attr('data-barcode')) ? '' : get_product_info_markup('Barcode', parent_card.attr('data-barcode'))}
             ${is_whitespace(parent_card.attr('data-brand')) ? '' : get_product_info_markup('Brand', parent_card.attr('data-brand'))}
@@ -1046,7 +1250,7 @@ $(document).ready(function(){
             if (is_shiped) most_recent_update_on = targeted_uom_order.shipped_dt;
             if (is_delivered) most_recent_update_on = targeted_uom_order.delivered_dt;
             // Determine is this order is at least 3 months recent
-            const allow_issue = (new Date() - new Date(`${most_recent_update_on}`)) / (1000 * 60 * 60 * 24 * 30) <= 3;
+            const allow_issue = (TODAY_DATE - new Date(`${most_recent_update_on}`)) / (1000 * 60 * 60 * 24 * 30) <= 3;
 
             const allow_cancelation = targeted_uom_order.order_status_code === 1 && targeted_uom_order.payment_status_code === 0 && allow_issue;
             const allow_return = targeted_uom_order.order_status_code === 5 && targeted_uom_order.payment_status_code === 1 && allow_issue && is_delivered;
@@ -1059,6 +1263,8 @@ $(document).ready(function(){
             disable_button(RETURN_ORDER_BTN, !allow_return);
             disable_button(ST_WRONG_ORDER_BTN, !allow_issue);
         }
+
+
         $('div[name=product-info-modal]').modal('show');
     });
 
@@ -1088,12 +1294,22 @@ $(document).ready(function(){
 
     RETURN_ORDER_BTN.on('click', function(event){
         if (targeted_uom_order === undefined || $('button[name=send-order-ticket-btn]').attr('data-sendingrequest') === '1') return;
-        render_ticket_form_modal(`Order ${targeted_uom_order.order_code} return`, targeted_uom_order, 7, targeted_uom_order.payment_status_code);
+        render_ticket_form_modal(`Order ${targeted_uom_order.order_code} return`, targeted_uom_order, 3, targeted_uom_order.payment_status_code);
     });
 
     ST_WRONG_ORDER_BTN.on('click', function(event){
         if (targeted_uom_order === undefined || $('button[name=send-order-ticket-btn]').attr('data-sendingrequest') === '1') return;
-        render_ticket_form_modal(`Order ${targeted_uom_order.order_code} other issues`, targeted_uom_order, targeted_uom_order.order_status_code, targeted_uom_order.payment_status_code);
+        render_ticket_form_modal(`Order ${targeted_uom_order.order_code} other issues`, targeted_uom_order, 8, targeted_uom_order.payment_status_code);
+    });
+
+    ORDER_TICKET_FORM_MODAL.on('hide.bs.modal', function (e) {
+        if ($('button[name=send-order-ticket-btn]').attr('data-sendingrequest') === '1'){
+            // Prevent auto closing Modal if POST Request has not completed
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+        }
+        return true;
     });
 
     //Submit Order Issue Ticket
@@ -1103,7 +1319,7 @@ $(document).ready(function(){
         const parent_form = ORDER_TICKET_FORM_MODAL.find('.modal-body').eq(0).find('form').eq(0)
 
         ORDER_TICKET_TITLE_INPUT.attr('disabled', true);
-        ORDER_TICKET_DESC_INPUT.attr('disabled', true);
+        ORDER_TICKET_DESC_INPUT.prop('disabled', true);
         disable_button(this_btn, true, BSTR_BORDER_SPINNER);
 
         $.ajax({
@@ -1123,13 +1339,161 @@ $(document).ready(function(){
                 this_btn.attr('data-sendingrequest', 0);
                 disable_button(this_btn, false, 'Submit');
                 ORDER_TICKET_TITLE_INPUT.attr('disabled', false);
-                ORDER_TICKET_DESC_INPUT.attr('disabled', false);
+                ORDER_TICKET_DESC_INPUT.prop('disabled', false);
 
                 if (String(status) !== 'success') return alert('Failed to submit a ticket at this time');
                 if ([504].includes(response.status)) return alert('Request timed out, please try again later');
                 alert(`A ticket with ID ${response['responseJSON']['crcfc_uomprocurementserviceorderticketid']} has been successfully submited`);
                 ORDER_TICKET_FORM_MODAL.modal('hide');
             }
+        });
+    });
+
+
+    //Ordered product quantity function
+    $(document).on('change keyup', 'input[name=product-quantity-input-field]', function(event){
+        const valid_input = verify_integer_input($(this), $(this).attr('placeholder'), 0);
+        if (!valid_input || [undefined, null].includes($(this).val())) return;
+
+        const parent_tr = $(this).closest(`tr[name=${ORDER_HISTORY_TABLE.attr('name')}-row]`);
+        const stock_ordered = parseInt(parent_tr.attr('data-stockordered'));
+
+        let _selected_order_status_value = 5;
+        if (parseInt($(this).val()) === stock_ordered){
+            _selected_order_status_value = 4;
+        }else if (parseInt($(this).val()) > stock_ordered) {
+            _selected_order_status_value = 7;
+        }
+
+        const correspond_order_status_obj = ORDER_STATUS_FILTER_OPTS.filter(data => data.value === _selected_order_status_value)[0];        
+        process_order_status_opt_selection_btn(parent_tr, correspond_order_status_obj)
+        parent_tr.attr('data-receivedquantity', $(this).val());
+        disable_button(APPLY_ORDER_INFO_CHANGES_BTN, false);
+    });
+
+    // Order product order status change button
+    $(document).on('change keyup', 'input[name=order-status-change-radio]', function(event){
+        const _label = $(this).attr('data-label');
+        const _value = parseInt($(this).attr('data-value'));
+
+        const parent_tr = $(this).closest(`tr[name=${ORDER_HISTORY_TABLE.attr('name')}-row]`);
+        const correspond_order_status_obj = ORDER_STATUS_FILTER_OPTS.filter(data => data.value === _value)[0];        
+        process_order_status_opt_selection_input_field_val(parent_tr, correspond_order_status_obj)
+
+        disable_button(APPLY_ORDER_INFO_CHANGES_BTN, false);
+    });
+
+    $(document).on('change keyup', 'input[name=select-uom-request-data-checkbox]', function(event){
+        disable_filter_elements($('input[name=select-uom-request-data-checkbox]:checked').length < 1);
+    });
+
+    $(document).on('click', 'div[name=mass-order-status-selection-opt-btn]', function(event){
+        disable_filter_elements();
+        const _label = $(this).attr('data-label');
+        const _value = parseInt($(this).attr('data-value'));
+        const correspond_order_status_obj = ORDER_STATUS_FILTER_OPTS.filter(data => data.value === _value)[0];        
+
+        $('input[name=select-uom-request-data-checkbox]:checked').each(function(){
+            const parent_tr = $(this).closest(`tr[name=${ORDER_HISTORY_TABLE.attr('name')}-row]`);
+            const request_uid = parent_tr.attr('data-requestuid');
+            $(document).find(`tr[name=${ORDER_HISTORY_TABLE.attr('name')}-row][data-requestuid='${request_uid}']`).each(function(){
+                process_order_status_opt_selection_input_field_val($(this), correspond_order_status_obj);
+            });
+        });
+        disable_filter_elements(false);
+        disable_button(APPLY_ORDER_INFO_CHANGES_BTN, false);
+    });
+
+    APPLY_ORDER_INFO_CHANGES_BTN.on('click', function(event){
+        let progress = 0;
+        const disabled_elements = $('.form-check-input, .filter-opt-radio, div[name=mass-order-status-selection-opt-container], .product-quantity-input-field, .integer-input, .opt-selection-btn, .search-and-filter-section, div[name=product-info-btn], .image-container');
+        disable_filter_elements(true, disabled_elements);
+        disable_button(APPLY_ORDER_INFO_CHANGES_BTN, true, BSTR_BORDER_SPINNER);
+
+        let updated_order_list = [];
+        $(document).find(`tr[name=${ORDER_HISTORY_TABLE.attr('name')}-row]`).each(function(){
+            const received_quantity_input_field = $(this).find('input[name=product-quantity-input-field]').eq(0);
+            if (!received_quantity_input_field.val() ||[null, undefined].includes(received_quantity_input_field.val())) return;
+
+            const corresponding_uom_order = FORMATTED_UOM_ORDERS.filter(order => order.order_uid === $(this).attr('data-orderuid') && order.request_uid === $(this).attr('data-requestuid'))[0];
+            if (corresponding_uom_order === undefined) return;
+            if (!corresponding_uom_order.is_beyond_approved) return;
+
+            const og_received_quantity = corresponding_uom_order.received_quantity;
+            const new_received_quantity = parseInt(received_quantity_input_field.val());
+            if (new_received_quantity < 0 ) return;
+            if ($(this).attr('data-ogorderstatuscode') === $(this).attr('data-orderstatuscode')
+                && new_received_quantity === og_received_quantity) return;
+
+            updated_order_list.push({
+                'request_uid': corresponding_uom_order.request_uid,
+                'order_uid': corresponding_uom_order.order_uid,
+                'received_quantity': new_received_quantity,
+                'ordered_quantity': parseInt($(this).attr('data-stockordered')),
+                'order_status': $(this).attr('data-orderstatus'),
+                'order_status_code': parseInt($(this).attr('data-orderstatuscode')),
+                'payment_status': $(this).attr('data-paymentstatus'),
+                'payment_status_code': parseInt($(this).attr('data-paymentstatuscode')),
+                'product_vendor_map_uid': corresponding_uom_order.vendor_map_uid,
+                'og_received_quantity': og_received_quantity,
+            });
+        });
+
+        function _reset_body_state(){
+            disable_filter_elements(false, disabled_elements);
+            disable_button(APPLY_ORDER_INFO_CHANGES_BTN, false, 'Apply Changes');
+        }
+
+        function _complete_request(){
+            if (progress < updated_order_list.length - 1) return progress++;
+            render_chart_js_content(false);
+            alert('Update success');
+            _reset_body_state();
+        }
+        let _grouped_updated_order_list = group_arr_of_objs(updated_order_list, 'request_uid');
+        const grouped_uom_order_by_requests = group_arr_of_objs(FORMATTED_UOM_ORDERS, 'request_uid');
+        _grouped_updated_order_list.forEach(grouped_updated_order => {
+            const corresponding_grouped_uom_order_by_request = grouped_uom_order_by_requests.filter(data => data.key === grouped_updated_order.key)[0];
+            if (corresponding_grouped_uom_order_by_request === undefined) return;
+            
+        });
+        //console.log(updated_order_list);
+        return;
+        if (updated_order_list.length < 1) return _reset_body_state();
+
+        function _ajax_update(updated_data){
+            $.ajax({
+                type: 'POST',
+                url: 'https://prod-06.australiasoutheast.logic.azure.com:443/workflows/bb15c27a9ee54c678dc0f0b27240dbb1/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tUtn4_vaj8Hm9Y3fkK5uhISsc8jZxElmZtA6bNT4L-g',
+                contentType: 'application/json',
+                accept: 'application/json;odata=verbose',
+                async: true,
+                timeout: AJAX_TIMEOUT_DURATION,
+                data: JSON.stringify(updated_data),
+                complete: function(response, status, xhr){
+                    _complete_request();
+                },
+                success: function(response, status, xhr){
+                    const corresponding_uom_order = FORMATTED_UOM_ORDERS.filter(order => order.order_uid === updated_data.order_uid && order.request_uid === updated_data.request_uid)[0];
+                    const corresponding_uom_order_row = $(document).find(`tr[name=${ORDER_HISTORY_TABLE.attr('name')}-row][data-orderuid='${updated_data.order_uid}'][data-requestuid='${updated_data.request_uid}']`);
+                    if (corresponding_uom_order === undefined || corresponding_uom_order_row.length < 1) return;
+
+                    corresponding_uom_order.received_quantity = updated_data.received_quantity;
+                    corresponding_uom_order.order_status_code = updated_data.order_status_code;
+                    corresponding_uom_order.order_status = updated_data.order_status;
+
+                    corresponding_uom_order_row.find('input[name=product-quantity-input-field]').attr('placeholder', updated_data.received_quantity);
+                    corresponding_uom_order_row.attr('data-ogorderstatuscode', updated_data.order_status_code);
+                }, error: function(response, status, xhr){}
+            });   
+        }
+
+        updated_order_list.forEach(function(updated_data, i){
+            (function(y) {
+                setTimeout(function() {
+                    _ajax_update(updated_data);
+                    }, y * 5);
+                }(i));
         });
     });
 });

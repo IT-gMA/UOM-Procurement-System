@@ -13,8 +13,6 @@
         </script>
         <script src='https://ajax.googleapis.com/ajax/libs/cesiumjs/1.78/Build/Cesium/Cesium.js'></script>
         <script src='https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js'></script>
-        <script src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'></script>    
-    
 
         <!--Bootstrap templates-->
         <link href='https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css' rel='stylesheet' integrity='sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65' crossorigin='anonymous'>
@@ -61,9 +59,9 @@
                     <div class='modal-body' name='product-info-section' style='display: flex; flex-direction: column; justify-content: center; align-items: center;'>
                     </div>
                     <div class='modal-footer cart-modal-btn-container'>
-                        <button type='button' class='btn btn-primary' name='cancel-order-btn' style='transition: 0.1s ease-in-out;' data-btnlabel='Cancel Order'>Cancel Order</button>
-                        <button type='button' class='btn btn-primary' name='request-return-order-btn' style='transition: 0.1s ease-in-out;' data-btnlabel='Issue Return'>Issue Return</button>
-                        <button type='button' class='btn btn-primary' name='st-wrong-order-btn' style='transition: 0.1s ease-in-out;' data-btnlabel='Other Issues'>Other Issues</button>
+                        <button type='button' class='btn btn-primary' name='cancel-order-btn' data-btnlabel='Cancel Order'>Cancel Order</button>
+                        <button type='button' class='btn btn-primary' name='request-return-order-btn' data-btnlabel='Issue Return'>Issue Return</button>
+                        <button type='button' class='btn btn-primary' name='st-wrong-order-btn' data-btnlabel='Other Issues'>Other Issues</button>
                     </div>
                 </div>
             </div>
@@ -204,13 +202,13 @@
             <div class='grid-body-content-section one-grid'>
                 <div class='filter-container' name='order-date-filter-opts'>
                     Order date
-                    <input class='search-text-field filter-search-text-field' type='text' name='order-date-range' type='datetime-local'/>
+                    <input class='search-text-field filter-search-text-field date-range-picker-input' type='text' name='order-date-range' type='datetime-local'/>
                 </div>
             </div>
             <br>
             <div class='grid-body-content-section two-grid'>
-                <button type='button' class='btn btn-primary' name='apply-search-filter-btn' style='transition: 0.1s ease-in-out;' disabled>Apply Filters</button>
-                <button type='button' class='btn btn-primary' name='clear-search-filter-btn' style='transition: 0.1s ease-in-out;' disabled>Clear Filters</button>
+                <button type='button' class='btn btn-primary' name='apply-search-filter-btn' disabled>Apply Filters</button>
+                <button type='button' class='btn btn-primary' name='clear-search-filter-btn' disabled>Clear Filters</button>
             </div>
             <br><br>
         </section>
@@ -229,18 +227,6 @@
                 <!--<div class='progress-indicator'><h6>0%</h6></div>-->
             </div>
         </section>
-
-        <section class='content-section order-history-content-section' name='order-stat-container-section'>
-            <div class='order-history-content-container'>
-                <div class='grid-body-content-section two-grid stats-container' name='order-payment-status-stat-container'></div><br>
-                <div class='grid-body-content-section one-grid stats-container' name='order-vendor-stat-container'></div><br>
-                <div class='grid-body-content-section one-grid stats-container' name='order-category-stat-container'></div><br>
-                <div class='grid-body-content-section one-grid stats-container' name='order-subcategory-stat-container'></div><br>
-                <div class='grid-body-content-section one-grid stats-container' name='order-weekofyear-stat-container'></div>
-            </div>
-            <br><br>
-        </section>
-
         <section class='content-section order-history-content-section'>
             <div class='order-history-content-container'>
                 <section class='search-and-filter-section'>
@@ -252,7 +238,10 @@
                 </section>
             </div>
         </section>
-
+        <section class='content-section search-and-filter-section'>
+            <div class='grid-body-content-section three-grid' name="mass-order-status-selection-opt-container">
+            </div>
+        </section>
         <section class='content-section order-history-content-section'>
             <div class='order-history-content-container'>
                 <div class='overflow-scroll content-table-element'>
@@ -260,24 +249,42 @@
                         <thead class='sticky-top'>
                             <tr>
                                 <th class='border-0 table-header' scope='col'></th>
-                                <th class='border-0 table-header' scope='col'>Order Code</th>
+                                <th class='border-0 table-header' scope='col'>Request</th>
+                                <th class='border-0 table-header' scope='col'></th>
+                                <th class='border-0 table-header' scope='col'>Vendor Code</th>
                                 <th class='border-0 table-header' scope='col'>Product</th>
                                 <th class='border-0 table-header' scope='col'>Vendor</th>
-                                <th class='border-0 table-header' scope='col'>Quantity</th>
+                                <th class='border-0 table-header' scope='col'>Ordered</th>
+                                <th class='border-0 table-header' scope='col'>Received</th>
+                                <th class='border-0 table-header' scope='col'>Unit</th>
                                 <th class='border-0 table-header' scope='col'>Spent</th>
-                                <th class='border-0 table-header' scope='col'>Ordered On</th>
-                                <th class='border-0 table-header' scope='col'>Payment Status</th>
                                 <th class='border-0 table-header' scope='col'>Order Status</th>
+                                <th class='border-0 table-header' scope='col'>Payment Status</th>
+                                <th class='border-0 table-header' scope='col'>Ordered On</th>
                             </tr>
                         </thead>
-                        <tbody>
-
-                        </tbody>
+                        <tbody></tbody>
                     </table>
+                </div>
+                <br>
+                <div class='single-btn-container'>
+                    <button type='button' class='btn btn-primary' name='apply-order-info-changes-btn' disabled>Apply Changes</button>
                 </div>
                 <br><br><br>
             </div>
         </section>
+
+        <section class='content-section order-history-content-section' name='order-stat-container-section'>
+            <div class='order-history-content-container'>
+                <div class='grid-body-content-section two-grid stats-container' name='order-payment-status-stat-container'></div><br>
+                <div class='grid-body-content-section one-grid stats-container' name='order-vendor-stat-container'></div><br>
+                <div class='grid-body-content-section one-grid stats-container' name='order-category-stat-container'></div><br>
+                <div class='grid-body-content-section one-grid stats-container' name='order-subcategory-stat-container'></div><br>
+                <div class='grid-body-content-section one-grid stats-container' name='order-weekofyear-stat-container'></div>
+            </div>
+            <br><br>
+        </section>
+        <br><br><br>
     </body>
 
     <!--My scripts-->
