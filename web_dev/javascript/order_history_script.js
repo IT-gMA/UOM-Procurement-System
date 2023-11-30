@@ -393,6 +393,22 @@ function extract_all_parent_target_data_attributes(target_element, to_formatted_
     }
     return !to_formatted_str ? attr_pairs : attr_pairs.map(attr_pair => `[${attr_pair.name}="${attr_pair.value}"]`).join('');
 }
+
+function extract_sub_object(og_obj, key_pattern=''){
+    let extracted_obj = {};
+    for (const key in og_obj) {
+        if (key.startsWith(key_pattern)) extracted_obj[`${key.replace(key_pattern, "")}`] = og_obj[key];
+    }
+    return extracted_obj;
+}
+
+function format_obj_prg_key(og_obj) {
+    const new_obj = {};
+    for (const key in og_obj) {
+      if (og_obj.hasOwnProperty(key)) new_obj[key.replace(/^_/, "").replace("_value", "")] = og_obj[key];
+    }
+    return new_obj;
+}
 /*End of Util functions*/
 
 
@@ -422,11 +438,15 @@ function is_purchase_request_editable(orders_grouped_by_request){
     return !orders_grouped_by_request.map(formatted_uom_order => formatted_uom_order.is_beyond_approved).includes(false);
 }
 
+function make_target_data_attr_markup(parent_target_datas){
+    return parent_target_datas.map((parent_target_data, idx) => `data-parenttargetdataname${idx}='${parent_target_data.name}' data-parenttargetdatavalue${idx}='${parent_target_data.value}'`).join(' ');
+}
+
 function make_collapse_tr_btn(collapse_idx, row_span, target_data_name, target_data_val, main_collapse_data_name, main_collapse_data_val, last_collapse_idx, parent_target_datas, collapsed=true, hidden=false){
     return `<br ${hidden ? ' hidden' : ''}>
     <span class="material-symbols-rounded${collapsed ? ' rotate-upside-down' : ''}" data-targetdatavalue='${target_data_val}' data-expand='${collapsed ? 0 : 1}' data-targetdata='${target_data_name}' data-rowspan='${row_span}' data-collapseidx='${collapse_idx}'
             data-maincollapsedatavalue='${main_collapse_data_val}' data-maincollapsedataname='${main_collapse_data_name}'
-            data-lastcollapseidx='${last_collapse_idx}' name='collapse-table-row-group-btn' ${parent_target_datas.map((parent_target_data, idx) => `data-parenttargetdataname${idx}='${parent_target_data.name}' data-parenttargetdatavalue${idx}='${parent_target_data.value}'`).join(' ')}
+            data-lastcollapseidx='${last_collapse_idx}' name='collapse-table-row-group-btn' ${make_target_data_attr_markup(parent_target_datas)}
             ${hidden ? ' hidden' : ''}>expand_more</span>`;
 }
 
@@ -501,7 +521,7 @@ function render_order_history_data_row(sort_latest=true, data_list=undefined){
                             data-requestuid='${formatted_uom_order.request_uid}' data-requestcode='${formatted_uom_order.request_code}'
                             data-isfirstidx='${get_sum_num_arr([order_idx, sub1_order_idx, sub2_order_idx, sub3_order_idx]) === 0 ? 1 : 0}'
                             style='display: ${get_sum_num_arr([sub1_order_idx, sub2_order_idx, sub3_order_idx]) === 0 ? 'table-row' : 'none'};'
-                        >
+                            ${make_target_data_attr_markup(parent_target_datas)}>
                             ${get_sum_num_arr([order_idx, sub1_order_idx, sub2_order_idx, sub3_order_idx]) === 0 ? `
                             <th scope="row" rowspan="${orders_grouped_by_vendor.length}" class='span-grouped-row' data-collapseidx='0'>
                                 ${is_purchase_request_editable(order_grouped_by_request.grouped_objects) ? 
@@ -602,12 +622,12 @@ function render_body_content(){
                     formatted_uom_order['order_unit_name'] = product['prg_orderunit@OData.Community.Display.V1.FormattedValue'];
                     formatted_uom_order['product_size'] = is_json_data_empty(product.prg_productsize) ? '' : product.prg_productsize;
                     formatted_uom_order['unit_size'] = product.prg_unitsize;
-                    formatted_uom_order['category_uid'] = product['_prg_category_value'];
-                    formatted_uom_order['category_name'] = product['_prg_category_value@OData.Community.Display.V1.FormattedValue'];
-                    formatted_uom_order['subcategory_uid'] = product['_prg_subcategory_value'];
-                    formatted_uom_order['subcategory_name'] = product['_prg_subcategory_value@OData.Community.Display.V1.FormattedValue'];
-                    formatted_uom_order['brand_code'] = is_json_data_empty(product['_prg_brand_value']) ? -1 : product['_prg_brand_value'];
-                    formatted_uom_order['brand_name'] = is_json_data_empty(product['_prg_brand_value@OData.Community.Display.V1.FormattedValue']) ? 'No Brand' : product['_prg_brand_value@OData.Community.Display.V1.FormattedValue'];
+                    formatted_uom_order['category_uid'] = product['prg_category'];
+                    formatted_uom_order['category_name'] = product['prg_category@OData.Community.Display.V1.FormattedValue'];
+                    formatted_uom_order['subcategory_uid'] = product['prg_subcategory'];
+                    formatted_uom_order['subcategory_name'] = product['prg_subcategory@OData.Community.Display.V1.FormattedValue'];
+                    formatted_uom_order['brand_code'] = is_json_data_empty(product['prg_brand']) ? -1 : product['prg_brand'];
+                    formatted_uom_order['brand_name'] = is_json_data_empty(product['prg_brand@OData.Community.Display.V1.FormattedValue']) ? 'No Brand' : product['prg_brand@OData.Community.Display.V1.FormattedValue'];
                     formatted_uom_order['trimmed_product_name'] = clean_white_space(product.prg_name.trim().toLowerCase());
                     formatted_uom_order['product_barcode'] = is_json_data_empty(product.prg_unitbarcodes) ? '' : product.prg_unitbarcodes;
                     formatted_uom_order['thumbnail_img'] = covert_product_b64_img_to_url(product.crcfc_img_content_mime_type, product.crcfc_img_content);
@@ -701,19 +721,8 @@ function render_body_content(){
                         'allow_ticket_raised': ELIGIBLE_TICKET_STATUS_CODES.includes(uom_order['prg_orderstatus']) && is_request_createdon_within_one_month,
                         'week_of_year_str': date_to_week_str(uom_order.createdon),
                     };
-                    $.ajax({
-                        type: 'POST',
-                        url: 'https://prod-25.australiasoutheast.logic.azure.com:443/workflows/45c876314ee44e57ac3a3ddfb77ce8e0/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=zeI80mSoOUMsp17egvcixDJJz-zumD_-E-mi0mR7TE4',
-                        contentType: 'application/json',
-                        accept: 'application/json;odata=verbose',
-                        timeout: AJAX_TIMEOUT_DURATION,
-                        async: true,
-                        data: JSON.stringify({'product_uid': formatted_uom_order.product_uid}),
-                        complete: function(response, status, xhr){
-                            if (String(status) !== 'success') return _finalise_request(true);
-                            assign_ordered_product_info(response['responseJSON'], formatted_uom_order);
-                            _finalise_request(true);
-                    }});
+                    assign_ordered_product_info(format_obj_prg_key(extract_sub_object({...uom_order}, 'ordered_product.')), formatted_uom_order);
+                    _finalise_request(true);
                 }
 
                 $.ajax({
@@ -728,12 +737,8 @@ function render_body_content(){
                         if (String(status) !== 'success') return _finalise_request(false);
                         const uom_orders = response['responseJSON'];
                         if (uom_orders.length < 1) return _finalise_request(false);
-                        uom_orders.forEach((uom_order, uom_order_idx) => {
-                            (function(y) {
-                                setTimeout(function() {
-                                    format_uom_order(uom_order);
-                                    }, y * 350);
-                                }(uom_order_idx));
+                        uom_orders.forEach(uom_order => {
+                            format_uom_order(uom_order);
                         });
                     }
                 });
@@ -744,7 +749,7 @@ function render_body_content(){
                 (function(y) {
                     setTimeout(function() {
                         retrieve_uom_orders(uom_request);
-                        }, y * 600);
+                        }, y * 80);
                     }(idx));
             });
             
@@ -1669,13 +1674,13 @@ $(document).ready(function(){
 
         $(this).attr('data-expand', expand ? 0 : 1);
         expand ? $(this).addClass('rotate-upside-down') : $(this).removeClass('rotate-upside-down');
-
         // Setups
         $(parent_table).find(`tr[name=${parent_table_name}-row][${main_collapse_data_name}='${main_collapse_data_value}'][${target_data_name}='${target_data_val}']`).each(function(){
-            // Iterate through each lower level from the next lower level
+            // Iterate through each lower level from the next lower/child level
+            const this_row = $(this);
             for (let i = collapse_idx + 1; i <= last_collpase_idx; i++){
-                $(this).find(`span[name=collapse-table-row-group-btn][data-collapseidx='${i}']`).each(function(){
-                    // Automatically collapse lower leveled table rows on its higher level sibling intercation
+                this_row.find(`span[name=collapse-table-row-group-btn][data-collapseidx='${i}']${parent_attrs.filter(parent_attr => parent_attr.idx <= collapse_idx).map(parent_attr => `[${parent_attr.name}='${parent_attr.value}']`).join('')}`).each(function(){
+                    // Automatically collapse lower leveled table rows on its higher level sibling interaction
                     $(this).closest('tr').find(`th[scope='row'][data-collapseidx='${i}']`).attr('rowspan', 1);
                     //$(this).closest('tr').find(`th[scope='row']`).css('background-color', 'grey');
                     if (!$(this).hasClass('rotate-upside-down')) $(this).addClass('rotate-upside-down');
@@ -1685,15 +1690,17 @@ $(document).ready(function(){
         });
 
         // Accessing this level table rows
-        $(`tr[name=${parent_table_name}-row][${main_collapse_data_name}='${main_collapse_data_value}'][${target_data_name}='${target_data_val}']`).each(function(){
+        $(`tr[name=${parent_table_name}-row][${main_collapse_data_name}='${main_collapse_data_value}'][${target_data_name}='${target_data_val}']${parent_attrs.filter(parent_attr => parent_attr.idx < collapse_idx).map(parent_attr => `[${parent_attr.name}='${parent_attr.value}']`).join('')}`).each(function(){
             const this_row = $(this);
             // Access table rows that do not have any collapse button assigned
-            if (this_row.find(`span[name=collapse-table-row-group-btn][data-collapseidx='${collapse_idx}'], span[name=collapse-table-row-group-btn][data-collapseidx='${collapse_idx + 1}']`).length < 1){
+            if (this_row.find(`span[name=collapse-table-row-group-btn][data-collapseidx='${collapse_idx}'], 
+                                span[name=collapse-table-row-group-btn][data-collapseidx='${collapse_idx + 1}']`).length < 1){
                 // If this is not the last level always hide these rows
                 if (collapse_idx < last_collpase_idx) return this_row.css('display', 'none');
                 // Otherwise show/hide them based on the current expnsion status
                 return this_row.css('display', expand ? 'none' : 'table-row');
-            }   
+            }
+
             if (this_row.find(`span[name=collapse-table-row-group-btn][data-collapseidx='${collapse_idx}']${parent_attrs.map(parent_attr => `[${parent_attr.name}='${parent_attr.value}']`).join('')}`).length > 0) {
                 return this_row.css('display', 'table-row');
             }

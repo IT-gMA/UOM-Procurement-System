@@ -270,11 +270,15 @@ function extract_all_parent_target_data_attributes(target_element, to_formatted_
 }
 /*End of Util functions*/
 
+function make_target_data_attr_markup(parent_target_datas){
+    return parent_target_datas.map((parent_target_data, idx) => `data-parenttargetdataname${idx}='${parent_target_data.name}' data-parenttargetdatavalue${idx}='${parent_target_data.value}'`).join(' ');
+}
+
 function make_collapse_tr_btn(collapse_idx, row_span, target_data_name, target_data_val, main_collapse_data_name, main_collapse_data_val, last_collapse_idx, parent_target_datas, collapsed=true, hidden=false){
     return `<br ${hidden ? ' hidden' : ''}>
     <span class="material-symbols-rounded${collapsed ? ' rotate-upside-down' : ''}" data-targetdatavalue='${target_data_val}' data-expand='${collapsed ? 0 : 1}' data-targetdata='${target_data_name}' data-rowspan='${row_span}' data-collapseidx='${collapse_idx}'
             data-maincollapsedatavalue='${main_collapse_data_val}' data-maincollapsedataname='${main_collapse_data_name}'
-            data-lastcollapseidx='${last_collapse_idx}' name='collapse-table-row-group-btn' ${parent_target_datas.map((parent_target_data, idx) => `data-parenttargetdataname${idx}='${parent_target_data.name}' data-parenttargetdatavalue${idx}='${parent_target_data.value}'`).join(' ')}
+            data-lastcollapseidx='${last_collapse_idx}' name='collapse-table-row-group-btn' ${make_target_data_attr_markup(parent_target_datas)}
             ${hidden ? ' hidden' : ''}>expand_more</span>`;
 }
 
@@ -352,7 +356,7 @@ function render_order_history_data_row(target_table){
                                 data-requestuid='${formatted_uom_order.request_uid}' data-requestcode='${formatted_uom_order.request_code}'
                                 data-isfirstidx='${get_sum_num_arr([order_idx, sub1_order_idx, sub2_order_idx, sub3_order_idx]) === 0 ? 1 : 0}'
                                 style='display: ${get_sum_num_arr([sub1_order_idx, sub2_order_idx, sub3_order_idx]) === 0 ? 'table-row' : 'none'};'
-                            >
+                                ${make_target_data_attr_markup(parent_target_datas)}>
                                 ${get_sum_num_arr([order_idx, sub1_order_idx, sub2_order_idx, sub3_order_idx]) === 0 ? `
                                 <th scope="row" rowspan="${orders_grouped_by_vendor.length}" class='span-grouped-row' data-collapseidx='0'>
                                     ${make_request_status_checkbox('select-uom-request-data-checkbox-on-request', [{data_name: 'data-requestuid', data_val: order_grouped_by_request.grouped_objects[0]['request_uid']}])}
@@ -1379,13 +1383,13 @@ $(document).ready(function(){
 
         $(this).attr('data-expand', expand ? 0 : 1);
         expand ? $(this).addClass('rotate-upside-down') : $(this).removeClass('rotate-upside-down');
-
         // Setups
         $(parent_table).find(`tr[name=${parent_table_name}-row][${main_collapse_data_name}='${main_collapse_data_value}'][${target_data_name}='${target_data_val}']`).each(function(){
-            // Iterate through each lower level from the next lower level
+            // Iterate through each lower level from the next lower/child level
+            const this_row = $(this);
             for (let i = collapse_idx + 1; i <= last_collpase_idx; i++){
-                $(this).find(`span[name=collapse-table-row-group-btn][data-collapseidx='${i}']`).each(function(){
-                    // Automatically collapse lower leveled table rows on its higher level sibling intercation
+                this_row.find(`span[name=collapse-table-row-group-btn][data-collapseidx='${i}']${parent_attrs.filter(parent_attr => parent_attr.idx < collapse_idx).map(parent_attr => `[${parent_attr.name}='${parent_attr.value}']`).join('')}`).each(function(){
+                    // Automatically collapse lower leveled table rows on its higher level sibling interaction
                     $(this).closest('tr').find(`th[scope='row'][data-collapseidx='${i}']`).attr('rowspan', 1);
                     //$(this).closest('tr').find(`th[scope='row']`).css('background-color', 'grey');
                     if (!$(this).hasClass('rotate-upside-down')) $(this).addClass('rotate-upside-down');
@@ -1395,15 +1399,17 @@ $(document).ready(function(){
         });
 
         // Accessing this level table rows
-        $(`tr[name=${parent_table_name}-row][${main_collapse_data_name}='${main_collapse_data_value}'][${target_data_name}='${target_data_val}']`).each(function(){
+        $(`tr[name=${parent_table_name}-row][${main_collapse_data_name}='${main_collapse_data_value}'][${target_data_name}='${target_data_val}']${parent_attrs.filter(parent_attr => parent_attr.idx <= collapse_idx).map(parent_attr => `[${parent_attr.name}='${parent_attr.value}']`).join('')}`).each(function(){
             const this_row = $(this);
             // Access table rows that do not have any collapse button assigned
-            if (this_row.find(`span[name=collapse-table-row-group-btn][data-collapseidx='${collapse_idx}'], span[name=collapse-table-row-group-btn][data-collapseidx='${collapse_idx + 1}']`).length < 1){
+            if (this_row.find(`span[name=collapse-table-row-group-btn][data-collapseidx='${collapse_idx}'], 
+                                span[name=collapse-table-row-group-btn][data-collapseidx='${collapse_idx + 1}']`).length < 1){
                 // If this is not the last level always hide these rows
                 if (collapse_idx < last_collpase_idx) return this_row.css('display', 'none');
                 // Otherwise show/hide them based on the current expnsion status
                 return this_row.css('display', expand ? 'none' : 'table-row');
-            }   
+            }
+
             if (this_row.find(`span[name=collapse-table-row-group-btn][data-collapseidx='${collapse_idx}']${parent_attrs.map(parent_attr => `[${parent_attr.name}='${parent_attr.value}']`).join('')}`).length > 0) {
                 return this_row.css('display', 'table-row');
             }

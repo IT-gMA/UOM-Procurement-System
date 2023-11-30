@@ -1041,6 +1041,7 @@ span[name='collapse-vendor-group-btn'], .inner-load-more-data-row-btn{
     cursor: pointer !important;
     margin-top: 0 !important;
     width: 100vw !important;
+    position:  relative !important;
 }
 
 .content-section.header-section .mask, .content-section.header-section .image-container img{
@@ -1076,13 +1077,21 @@ span[name='collapse-vendor-group-btn'], .inner-load-more-data-row-btn{
     width: 100% !important;
 }
 
+.content-section.header-section .image-container, .content-section.header-section .image-container img{
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
 .content-section.header-section .image-container img{
     object-fit: cover !important;
     z-index: 0 !important;
 }
 
-.header-txt-content-container{
+.header-txt-content-container h2{
     color: white !important;
+}
+
+.header-txt-content-container{
     font-weight: bold !important;
     display: grid !important;
     grid-template-columns: 1fr 2fr !important;
