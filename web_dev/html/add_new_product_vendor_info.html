@@ -53,13 +53,6 @@
             <div name='search-filter-container' class='search-filter-container'>
                 <div class='search-bar-container border-effect' style='max-width: 500px;'>
                     <i class='fa fa-search' id='search-icon'></i>
-                    <input class='search-text-field filter-search-text-field order-attr-filter-opt-container' type='text' placeholder='Search for vendors' name='vendor-search-input-field'>
-                </div>
-            </div>
-            <br>
-            <div name='search-filter-container' class='search-filter-container'>
-                <div class='search-bar-container border-effect' style='max-width: 500px;'>
-                    <i class='fa fa-search' id='search-icon'></i>
                     <input class='search-text-field filter-search-text-field order-attr-filter-opt-container' type='text' placeholder='Search for products' name='product-search-input-field'>
                 </div>
             </div>
@@ -97,7 +90,7 @@
             
             <br>
             <div class='grid-body-content-section two-grid'>
-                <button type='button' class='btn btn-primary' name='apply-search-filter-btn'>Apply Filters</button>
+                <button type='button' class='btn btn-primary' name='apply-search-filter-btn' disabled>Apply Filters</button>
                 <button type='button' class='btn btn-primary' name='clear-search-filter-btn' disabled>Clear Filters</button>
             </div>
             <br><br>
@@ -107,14 +100,6 @@
             <div class='resource-loader' name='spinner-resource-loader-container'>
                 <img src='https://i.ibb.co/Vp2hJGW/loading-spinner.gif'>
             </div>
-            <div class='resource-loader' name='progress-resource-loader-container'>
-                <br><br>
-                <div class='progress'>
-                    <div class='progress-bar progress-bar-striped progress-bar-animated' role='progressbar' aria-valuenow='0' aria-valuemin='0' aria-valuemax='100' style='width: 0%' name='request-loader-progress-bar'></div>
-                    </div>
-                <!--<br>
-                <div class='progress-indicator'><h6></h6></div>-->
-        </div>
         </section>
 
         <section class='content-section order-history-content-section'>
@@ -123,16 +108,10 @@
                     <table class='table table-hover shadow-inset rounded' name='product-vendor-map-table'>
                         <thead class='sticky-top'>
                             <tr>
-                                <th class='border-0 table-header' scope='col'></th>
-                                <th class='border-0 table-header' scope='col'>Vendor</th>
                                 <th class='border-0 table-header' scope='col'>Code</th>
                                 <th class='border-0 table-header' scope='col'>Product</th>
                                 <th class='border-0 table-header' scope='col'>On Hand</th>
-                                <th class='border-0 table-header' scope='col'>Ordered</th>
-                                <th class='border-0 table-header' scope='col'>-</th>
-                                <th class='border-0 table-header' scope='col'>Received</th>
                                 <th class='border-0 table-header' scope='col'>Price</th>
-                                <th class='border-0 table-header' scope='col'>Spent</th>
                                 <th class='border-0 table-header' scope='col'>Active</th>
                                 <th class='border-0 table-header' scope='col'>Category</th>
                                 <th class='border-0 table-header' scope='col'>Sub-Category</th>
@@ -142,22 +121,19 @@
                                 <th class='border-0 table-header' scope='col'>Unit Name</th>
                                 <th class='border-0 table-header' scope='col'>Min Order</th>
                                 <th class='border-0 table-header' scope='col'>Bulk Order</th>
-                                <th class='border-0 table-header' scope='col'>Stock Refresh On</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
                     </table>
-                </div>
-                <br>
+                </div><br>
                 <div class='single-btn-container'>
-                    <button type='button' class='btn btn-primary' name='apply-order-info-changes-btn' disabled>Apply Changes</button>
+                    <button type='button' class='btn btn-primary' name='load-more-btn' disabled>Load More</button><br>
+                    <button type='button' class='btn btn-primary' name='apply-order-info-changes-btn' disabled>Apply Changes</button><br>
                 </div>
-                <br><br><br>
             </div>
         </section>
-        <br><br><br>
     </body>
 
     <!--My scripts-->
-    <script id='jquery' type='text/javascript' src='../javascript/manage_product_vendors.js'></script>
+    <script id='jquery' type='text/javascript' src='../javascript/add_new_product_vendor_info.js'></script>
 </html>

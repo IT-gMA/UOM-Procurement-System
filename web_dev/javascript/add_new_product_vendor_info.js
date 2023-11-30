@@ -3,7 +3,7 @@ const PLACE_HOLDER_IMG_URL = 'https://i.ibb.co/VMPPhzc/place-holder-catering-ite
 
 const APPLY_FILTER_BTN = $('button[name=apply-search-filter-btn]');
 const CLEAR_FILTER_BTN = $('button[name=clear-search-filter-btn]');
-const VENDOR_SEARCH_TEXT_FIELD = $('input[name=vendor-search-input-field]');
+const LOAD_MORE_BTN = $('button[name=load-more-btn]');
 const PRODUCT_SEARCH_TEXT_FIELD = $('input[name=product-search-input-field]');
 const APPLY_PRODUCT_INFO_CHANGES_BTN = $('button[name=apply-order-info-changes-btn]');
 
@@ -29,11 +29,13 @@ let brand_filter_options = [{'value': -1, 'label': 'No Brand'}];
 let category_filter_options = [];
 let subcategory_filter_options = [];
 let VENDORS = [];
+let CHOSEN_VENDOR = undefined;
 let UOM_PRODUCT_UIDS = [];
 let UOM_PRODUCT_VENDOR_MAPS = [];
 const DISABLED_ELEM_CLASS = 'disabled-element';
 const ERR_INPUT_INDICATOR_CLASS = 'red-outline';
-const MAX_RECORD_NUM = 5000;
+const MAX_RECORD_NUM = 1000;
+let CURR_PAGE_NUM = 1;
 
 /*Util Functions*/
 function clean_white_space(input_string, all=true){
@@ -177,7 +179,7 @@ function make_load_more_product_vendor_map_btn_markup(vendor_map_group, format_m
     ${format_mapping.has_next ? `<span class="material-symbols-rounded inner-load-more-data-row-btn" data-vendoruid='${format_mapping.vendor_uid}' name='load-more-product-vendor-map-btn'>shelf_auto_hide</span>` : ''}`;
 }
 
-function make_product_vendor_map_row_markup(target_table, vendor_map_group, format_mapping, is_first=false){
+function make_product_vendor_map_row_markup(target_table, format_mapping){
     return `
     <tr class='data-row' name='${target_table.attr('name')}-row'
                     data-productuid='${format_mapping.product_uid}' data-productname='${format_mapping.product_name}' data-productnametrimmed='${format_mapping.product_trimmed_name}' data-productbarcode='${format_mapping.product_barcode}' data-thumbnailimg='${format_mapping.thumbnail_img}'
@@ -189,105 +191,59 @@ function make_product_vendor_map_row_markup(target_table, vendor_map_group, form
                     data-brandcode='${format_mapping.brand_code}' data-brandname='${format_mapping.brand_name}'
                     data-vendoruid='${format_mapping.vendor_uid}' data-vendorname='${format_mapping.vendor_name}'  
                     data-vendormapcode='${format_mapping.vendor_map_code}' data-vendormapuid='${format_mapping.vendor_map_uid}'
-                    data-vendorstockonhand='${format_mapping.vendor_stock_on_hand}'  data-vendorstockordered='${format_mapping.vendor_stock_ordered}' data-vendorstocktransit='${format_mapping.vendor_stock_transit}'
-                    data-vendorprice='${format_mapping.vendor_price}' data-totalspent='${format_mapping.total_spent}' data-createdon='${format_mapping.createdon}'
-                    data-isactive='${format_mapping.is_active ? 1 : 0}' data-laststockrefreshdate='${format_mapping.stock_refresh_date}' data-laststockrefreshdatestr='${format_mapping.stock_refresh_date_str}'
-                    data-hasnext='${format_mapping.has_next}' data-pagenum='${format_mapping.curr_page_num}'
-                    data-isfirstidx='${is_first ? 1 : 0}'
-                    data-vendorstockremained='${format_mapping.vendor_stock_remained}'
+                    data-vendorstockonhand='${format_mapping.vendor_stock_on_hand}'
+                    data-vendorprice='${format_mapping.vendor_price}' 
+                    data-isactive='${format_mapping.is_active ? 1 : 0}'
                 >
-                ${is_first ? `
-                <th scope="row" rowspan="${vendor_map_group.length}" class='span-grouped-row'>
-                    ${make_load_more_product_vendor_map_btn_markup(vendor_map_group, format_mapping)}
-                </th>
-                <th scope="row" rowspan="${vendor_map_group.length}" class='span-grouped-row'>
-                    ${format_mapping.vendor_name}<br>
-                    <span class="material-symbols-rounded collapse-vendor-group-btn" data-vendoruid='${format_mapping.vendor_uid}' name='collapse-vendor-group-btn' data-expand='1' data-targetdata='data-vendoruid' data-rowspan='${vendor_map_group.length}'>expand_more</span>
-                </th>
-                ` : ''}
-                <td>
-                    <input maxlength='800' class='long-txt-edit-field border-effect' type='text' 
-                        placeholder='${format_mapping.vendor_map_code}' name="vendor-map-code-input-field" value='${format_mapping.vendor_map_code}'/>
-                </td>
-                <td>${format_mapping.product_name}</td>
-                <td>
-                    <input maxlength='10000' class='product-quantity-input-field integer-input border-effect' type='text' 
-                        placeholder='${format_mapping.vendor_stock_on_hand}' name="stock-on-hand-input-field" value='${format_mapping.vendor_stock_on_hand}'/>
-                </td>
-                <td>${format_mapping.vendor_stock_ordered}</td>
-                <td name='stock-remained-txt-container'>${format_mapping.vendor_stock_remained_str}</td>
-                <td>${format_mapping.vendor_stock_transit}</td>
-                <td> 
-                    <input maxlength='10' class='product-quantity-input-field integer-input border-effect' type='text' 
-                        placeholder='${format_mapping.vendor_price}' name="vendor-price-input-field" value='${format_mapping.vendor_price.toFixed(2)}'/>
-                </td>
-                <td>$${format_mapping.total_spent}</td>
-                <td>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input item-active-state-switch" type="checkbox" name='item-active-state-switch' ${format_mapping.is_active ? 'checked' : ''}>
-                    </div>
-                </td>
-                <td>${format_mapping.category_name}</td>
-                <td>${format_mapping.subcategory_name}</td>
-                <td>${format_mapping.brand_name}</td>
-                <td>${format_mapping.product_barcode}</td>
-                <td>${format_mapping.product_size}</td>
-                <td>${format_mapping.order_unit_name}</td>
+                <td><input maxlength='800' class='long-txt-edit-field border-effect' type='text' placeholder='${format_mapping.vendor_map_code}' name="vendor-map-code-input-field" value='${format_mapping.vendor_map_code}'/></td>
+                <td style='min-width: 28ch;'>${format_mapping.product_name}</td>
+                <td><input maxlength='10000' class='product-quantity-input-field integer-input border-effect' type='text' placeholder='${format_mapping.vendor_stock_on_hand}' name="stock-on-hand-input-field" value='${format_mapping.vendor_stock_on_hand}'/></td>
+                <td style='min-width: 8ch;'><input maxlength='10' class='product-quantity-input-field integer-input border-effect' type='text' placeholder='${0}' name="vendor-price-input-field" value='${0}'/></td>
+                <td><div class="form-check form-switch"><input class="form-check-input item-active-state-switch" type="checkbox" name='item-active-state-switch' ${format_mapping.is_active ? 'checked' : ''}></div></td>
+                <td style='min-width: 28ch;'>${format_mapping.category_name}</td>
+                <td style='min-width: 28ch;'>${format_mapping.subcategory_name}</td>
+                <td style='min-width: 15ch;'>${format_mapping.brand_name}</td>
+                <td style='min-width: 20ch;'>${format_mapping.product_barcode}</td>
+                <td style='min-width: 10ch;'>${format_mapping.product_size}</td>
+                <td style='min-width: 10ch;'>${format_mapping.order_unit_name}</td>
                 <td>${format_mapping.min_quantity}</td>
-                <td>${format_mapping.bulk_order_unit_name}</td>
-                <td>${format_mapping.stock_refresh_date_str}</td>
+                <td style='min-width: 10ch;'>${format_mapping.bulk_order_unit_name}</td>
     </tr>
     `;
 }
 
-function render_product_vendor_map_table(target_table){
-    UOM_PRODUCT_VENDOR_MAPS.sort((a, b) => `${a.vendor_name}-${a.product_name}`.localeCompare(`${b.vendor_name}-${b.product_name}`));
-    group_arr_of_objs(UOM_PRODUCT_VENDOR_MAPS, 'vendor_uid').forEach(vendor_grouped_data => {
-        vendor_grouped_data.grouped_objects.forEach((format_mapping, idx) => {
-            target_table.find('tbody').append(make_product_vendor_map_row_markup(target_table, vendor_grouped_data.grouped_objects, format_mapping, idx === 0));
-        });
-    })
-}
 
-
-function format_product_vendor_map(json_mapping, vendor_info, has_next){
+function format_product_vendor_map(json_mapping, vendor_info){
     return {
-        'product_uid': json_mapping['_prg_product_value'],
-        'product_barcode': is_json_data_empty(json_mapping['product.prg_unitbarcodes']) ? '' : json_mapping['product.prg_unitbarcodes'],
-        'product_name': json_mapping['_prg_product_value@OData.Community.Display.V1.FormattedValue'],
-        'product_trimmed_name': clean_white_space(json_mapping['_prg_product_value@OData.Community.Display.V1.FormattedValue'].trim().toLowerCase()),
-        'thumbnail_img': is_json_data_empty(json_mapping['product.prg_img_url']) ? PLACE_HOLDER_IMG_URL : json_mapping['product.prg_img_url'],
-        'remark': json_mapping['product.prg_remarks'] ?? '',
-        'min_quantity': json_mapping['product.prg_minorderquantity'],
-        'order_unit_code': json_mapping['product.prg_orderunit'],
-        'order_unit_name': json_mapping['product.prg_orderunit@OData.Community.Display.V1.FormattedValue'],
-        'product_size': is_json_data_empty(json_mapping['product.prg_productsize']) ? '' : json_mapping['product.prg_productsize'],
-        'unit_size': json_mapping['product.prg_unitsize'],
-        'category_uid': json_mapping['product.prg_category'],
-        'category_name': json_mapping['product.prg_category@OData.Community.Display.V1.FormattedValue'],
-        'subcategory_uid': json_mapping['product.prg_subcategory'],
-        'subcategory_name': json_mapping['product.prg_subcategory@OData.Community.Display.V1.FormattedValue'],
-        'brand_code': is_json_data_empty(json_mapping['product.prg_brand']) ? -1 : json_mapping['product.prg_brand'],
-        'brand_name': is_json_data_empty(json_mapping['product.prg_brand@OData.Community.Display.V1.FormattedValue']) ? 'No Brand' : json_mapping['product.prg_brand@OData.Community.Display.V1.FormattedValue'],
-        'vendor_uid': json_mapping['_prg_vendor_value'],
-        'vendor_name': json_mapping['_prg_vendor_value@OData.Community.Display.V1.FormattedValue'],
-        'vendor_map_code': json_mapping.prg_code,
-        'vendor_map_uid': json_mapping.prg_uomprocurementserviceproductvendormapid,
-        'vendor_stock_on_hand': json_mapping.prg_stockonhand,
-        'vendor_stock_ordered': json_mapping.prg_stockorderd,
-        'vendor_stock_remained': json_mapping.prg_stockonhand - json_mapping.prg_stockorderd,
-        'vendor_stock_remained_str': _format_vendor_stock_remained(json_mapping.prg_stockonhand, json_mapping.prg_stockorderd),
-        'vendor_stock_transit': json_mapping.prg_stockintransit,
+        'odata_id': json_mapping['@odata.id'],
+        'product_uid': json_mapping.prg_uomprocurementserviceproductsid,
+        'product_barcode': is_json_data_empty(json_mapping['prg_unitbarcodes']) ? '' : json_mapping['prg_unitbarcodes'],
+        'product_name': json_mapping['prg_name'],
+        'product_trimmed_name': clean_white_space(json_mapping['prg_name'].trim().toLowerCase()),
+        'thumbnail_img': is_json_data_empty(json_mapping['prg_img_url']) ? PLACE_HOLDER_IMG_URL : json_mapping['prg_img_url'],
+        'remark': json_mapping['prg_remarks'] ?? '',
+        'min_quantity': json_mapping['prg_minorderquantity'],
+        'order_unit_code': json_mapping['prg_orderunit'],
+        'order_unit_name': json_mapping['prg_orderunit@OData.Community.Display.V1.FormattedValue'],
+        'product_size': is_json_data_empty(json_mapping['prg_productsize']) ? '' : json_mapping['prg_productsize'],
+        'unit_size': json_mapping['prg_unitsize'],
+        'category_uid': json_mapping['_prg_category_value'],
+        'category_name': json_mapping['_prg_category_value@OData.Community.Display.V1.FormattedValue'],
+        'subcategory_uid': json_mapping['_prg_subcategory_value'],
+        'subcategory_name': json_mapping['_prg_subcategory_value@OData.Community.Display.V1.FormattedValue'],
+        'brand_code': is_json_data_empty(json_mapping['_prg_brand_value']) ? -1 : json_mapping['_prg_brand_value'],
+        'brand_name': is_json_data_empty(json_mapping['_prg_brand_value@OData.Community.Display.V1.FormattedValue']) ? 'No Brand' : json_mapping['_prg_brand_value@OData.Community.Display.V1.FormattedValue'],
+        'vendor_uid': vendor_info.vendor_uid,
+        'vendor_name': vendor_info.vendor_name,
+        'vendor_map_code': '',
+        'vendor_map_uid': '',
+        'vendor_stock_on_hand': 0,
+        'vendor_stock_ordered': 0,
         'vendor_price': json_mapping.prg_price_base,
         'total_spent': parseFloat(json_mapping.prg_price_base * json_mapping.prg_stockorderd).toFixed(2),
-        'createdon': json_mapping.createdon,
-        'stock_refresh_date': is_json_data_empty(json_mapping.crcfc_stock_change_date) ? '' : json_mapping.crcfc_stock_change_date,
-        'stock_refresh_date_str': is_json_data_empty(json_mapping.crcfc_stock_change_date) ? '_' : format_dt(new Date(json_mapping.crcfc_stock_change_date)),
-        'bulk_order_unit_code': is_json_data_empty(json_mapping['product.prg_bulkorder']) ? 0 : json_mapping['product.prg_bulkorder'],
-        'bulk_order_unit_name': is_json_data_empty(json_mapping['product.prg_bulkorder']) ? 'N/A' : json_mapping['product.prg_bulkorder@OData.Community.Display.V1.FormattedValue'],
-        'is_active': json_mapping.statecode === 0,
-        'has_next': has_next,
-        'curr_page_num': vendor_info.curr_page_num,
+        'bulk_order_unit_code': is_json_data_empty(json_mapping['prg_bulkorder']) ? 0 : json_mapping['prg_bulkorder'],
+        'bulk_order_unit_name': is_json_data_empty(json_mapping['prg_bulkorder']) ? 'N/A' : json_mapping['prg_bulkorder@OData.Community.Display.V1.FormattedValue'],
+        'is_active': false,
     }
 }
 
@@ -383,24 +339,22 @@ function get_product_info_markup(info_name, info_content, is_last=false){
     return `<h6><span style='font-weight: bold;'>${info_name}: </span>${info_content}</h6>${is_last ? '' : '<br>'}`;
 }
 
-
-function render_loading_progress_bar(curr_progress=0){
-    curr_progress = curr_progress < 0 ? 0 : curr_progress;
-    curr_progress = curr_progress > 100 ? 100 : curr_progress;
-
-    PROGRESS_BAR_DOM.attr('aria-valuenow', curr_progress);
-    PROGRESS_BAR_DOM.css('width', `${curr_progress}%`);
-    //$('.progress-indicator').find('h6').text(`${curr_progress.toFixed(2)}%`);
+function _split_searched_results(searched_input_dom){
+    if (is_whitespace(searched_input_dom.val())) return[''];
+    const searched_txt = clean_white_space(searched_input_dom.val().trim().toLowerCase());
+    const searched_vals = searched_txt.split(';;');
+    if (searched_vals.length < 1 || is_whitespace(searched_txt)) return [''];
+    return searched_vals.filter(searched_val => !is_whitespace(searched_val));
 }
 /*End of Util functions*/
 
 
-function render_filter_options(dropdown_container, filter_opts, sort_by_label=false){
+function render_filter_options(dropdown_container, filter_opts, sort_by_label=false, is_checkbox=true){
     if (sort_by_label) filter_opts = filter_opts.sort((a, b) => a.label.localeCompare(b.label));
     filter_opts.forEach(filter_opt => {
         dropdown_container.append(`
         <div class='dropdown-item order-attr-filter-opt-container'>
-            <input class='form-check-input filter-opt-radio' type='checkbox' name='${dropdown_container.attr('name')}-checkbox'
+            <input class='form-check-input filter-opt-radio' type='${is_checkbox ? 'checkbox' : 'radio'}' name='${dropdown_container.attr('name')}-checkbox'
                     data-label='${filter_opt.label}' data-value='${filter_opt.value}' data-parentul='${dropdown_container.attr('name')}'>
             <label class='form-check-label'>${filter_opt.label}</label>
         </div>
@@ -440,6 +394,7 @@ function render_body_content(){
                     'vendor_name_trimmed': clean_white_space(vendor.prg_name.trim().toLowerCase()),
                     'curr_page_num': 1,
                     'is_loading_more': false,
+                    'odataid': vendor['@odata.id'],
                 });
             });
             response.brands.forEach(brand => {
@@ -454,7 +409,7 @@ function render_body_content(){
                 category_filter_options.push({'label': category.prg_name, 'value': category.prg_uomprocurementservicecategoriesid});
             });
 
-            render_filter_options(VENDOR_FILTER_DROPDOWN, vendor_filter_options);
+            render_filter_options(VENDOR_FILTER_DROPDOWN, vendor_filter_options, true, false);
             render_filter_options(BRAND_FILTER_DROPDOWN, brand_filter_options);
             render_filter_options(CATEGORY_FILTER_DROPDOWN, category_filter_options);
             render_filter_options(SUBCATEGORY_FILTER_DROPDOWN, subcategory_filter_options);
@@ -481,9 +436,9 @@ function get_selected_filter_values(checkbox_name, to_int=false){
 
 
 $(document).ready(function(){
+    LOAD_MORE_BTN.toggle(false);
     hide_elems_on_load();
     render_body_content();
-
 
     //Filter function
     $(document).on('keyup change', `${product_filter_checkbox_func_names}, input[name=sort-option-radio-checkbox], input[name=vendor-search-input-field]`, function(event){
@@ -492,33 +447,19 @@ $(document).ready(function(){
             no_filter = no_filter && $(`input[name=${dropdown.attr('name')}-checkbox]:checked`).length < 1;
         });
         disable_button(CLEAR_FILTER_BTN, !$('input[name=product-search-input-field]').val() && $('input[name=sort-option-radio-checkbox]:checked').length < 1 && no_filter);
-        //disable_button(CLEAR_FILTER_BTN, APPLY_FILTER_BTN.prop('disabled'));
+        disable_button(APPLY_FILTER_BTN, VENDOR_FILTER_DROPDOWN.find(`input[type='radio']:checked`).length !== 1);
     });
 
-    function ready_loading_query(complete=false){
-        render_loading_progress_bar(0);
-        $('.resource-loader-section').toggle(!complete);
-        $('div[name=spinner-resource-loader-container]').toggle(false);
-        $('div[name=progress-resource-loader-container]').toggle(!complete);
+    function ready_loading_query(complete=false, load_more=false){
         disable_filter_elements(!complete);
-        $('.content-section.order-history-content-section').toggle(complete);
+        if (!load_more) $('.content-section.order-history-content-section').toggle(complete);
         disable_button(APPLY_PRODUCT_INFO_CHANGES_BTN);
-
-        if (!complete) {
-            UOM_PRODUCT_VENDOR_MAPS = [];
-            PRODUCT_VENDOR_MAP_TABLE.find('tbody').empty();
-            VENDORS.forEach(vendor => {
-                vendor.curr_page_num = 1;
-                vendor.is_loading_more = false;
-            });
-        }
     }
 
     function process_filter_opts(){
-        const searched_vendor = [undefined, null].includes(VENDOR_SEARCH_TEXT_FIELD.val()) ? '' : VENDOR_SEARCH_TEXT_FIELD.val();
-        const filtered_vendor_opts = get_selected_filter_values(`${VENDOR_FILTER_DROPDOWN.attr('name')}-checkbox`);
+        const filtered_vendor_opt = VENDOR_FILTER_DROPDOWN.find(`input[type='radio']:checked`).attr('data-value');
 
-        const searched_products = [undefined, null].includes(PRODUCT_SEARCH_TEXT_FIELD.val()) ? '' : PRODUCT_SEARCH_TEXT_FIELD.val();
+        const searched_products = _split_searched_results(PRODUCT_SEARCH_TEXT_FIELD);//[undefined, null].includes(PRODUCT_SEARCH_TEXT_FIELD.val()) ? '' : PRODUCT_SEARCH_TEXT_FIELD.val();
         let filtered_brand_opts =  get_selected_filter_values(`${BRAND_FILTER_DROPDOWN.attr('name')}-checkbox`);
         if (filtered_brand_opts.indexOf('-1') !== -1) {
             // Replace '-1' with null
@@ -529,7 +470,7 @@ $(document).ready(function(){
         const filtered_category_opts =  get_selected_filter_values(`${CATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
         const filtered_subcategory_opts =  get_selected_filter_values(`${SUBCATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
         
-        const filtered_vendors = VENDORS.filter(vendor => filtered_vendor_opts.includes(vendor.vendor_uid) && vendor.vendor_name_trimmed.includes(clean_white_space(searched_vendor.trim().toLowerCase())));
+        const filtered_vendors = VENDORS.filter(vendor => filtered_vendor_opt === vendor.vendor_uid);
 
         const filtered_category_xml_query = `
         <link-entity name="prg_uomprocurementservicecategories" from="prg_uomprocurementservicecategoriesid" to="prg_category" alias="category">
@@ -548,9 +489,9 @@ $(document).ready(function(){
             </filter>
         </link-entity>`;
         const filtered_product_name_xml_query = `
-        <filter type="and">
-            <condition attribute="prg_name_trimmed" operator="like" value="%${clean_white_space(searched_products.trim().toLowerCase())}%" />
-        </filter>`;
+        ${searched_products.length < 1 ? '' : 
+        `<filter type="or">${searched_products.map(searched_product => `<condition attribute="prg_name_trimmed" operator="like" value="%${searched_product}%"/>`).join('\n')}</filter>`}`;
+
         const filtered_brand_xml_query = filtered_brand_opts.includes(null) ? `
         <link-entity name="prg_ggorderbrand" from="prg_ggorderbrandid" to="prg_brand" alias="brand" link-type="outer">
                 <filter type="or">
@@ -574,11 +515,9 @@ $(document).ready(function(){
                 'filtered_brand_xml_query': filtered_brand_xml_query};
     }
 
-    APPLY_FILTER_BTN.on('click', function(event){
-        let progress = 0;
-
-        disable_button(CLEAR_FILTER_BTN, true);
-        disable_button(APPLY_FILTER_BTN, true, BSTR_BORDER_SPINNER);
+    $(`button[name=${APPLY_FILTER_BTN.attr('name')}], button[name=${LOAD_MORE_BTN.attr('name')}]`).on('click', function(event){
+        const this_btn = $(this);
+        const is_loading_more = this_btn.attr('name') === LOAD_MORE_BTN.attr('name');
 
         const {
             filtered_vendors,
@@ -587,23 +526,28 @@ $(document).ready(function(){
             filtered_product_name_xml_query,
             filtered_brand_xml_query,
         } = process_filter_opts();
+        if (!is_loading_more){
+            CHOSEN_VENDOR = VENDORS.filter(vendor => vendor.vendor_uid === filtered_vendors[0]['vendor_uid'])[0];
+        }
+        if (filtered_vendors.length < 1 || CURR_PAGE_NUM < 1 || CHOSEN_VENDOR === undefined) return;
+        disable_button(CLEAR_FILTER_BTN, true);
+        disable_button(this_btn, true, BSTR_BORDER_SPINNER);
 
-        ready_loading_query();
+        ready_loading_query(false, is_loading_more);
 
         function _complete_request(){
-            if (progress < filtered_vendors.length - 1) return progress++;
-            ready_loading_query(true);
+            ready_loading_query(true, is_loading_more);
             disable_button(CLEAR_FILTER_BTN, false);
             disable_button(APPLY_FILTER_BTN, true, 'Apply Filters');
-            render_product_vendor_map_table(PRODUCT_VENDOR_MAP_TABLE);
+            disable_button(LOAD_MORE_BTN, CURR_PAGE_NUM < 1, 'Load More');
+            LOAD_MORE_BTN.toggle(CURR_PAGE_NUM >= 1);
             disable_filter_elements(true, $('.order-attr-filter-opt-container'));
         }
-
 
         function retrieve_product_vendor_map(filtered_vendor){
             $.ajax({
                 type: 'POST',
-                url: 'https://prod-20.australiasoutheast.logic.azure.com:443/workflows/89b0941872fa40a2aabc91ebca4524c5/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=BLHeznQEMS8U3e6eYTo7U3bGwyzLJ7qhlOecfEFwjo4',
+                url: 'https://prod-29.australiasoutheast.logic.azure.com:443/workflows/b0e1105b0d1141dea17c9a0b6a12443a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=N_0Zckna40QBTKUkRUPvfKPfXieM3hj1Q3tLeDdoMtE',
                 contentType: 'application/json',
                 accept: 'application/json;odata=verbose',
                 timeout: AJAX_TIMEOUT_DURATION,
@@ -612,35 +556,26 @@ $(document).ready(function(){
                                         'filtered_product_name_xml_query': filtered_product_name_xml_query, 
                                         'filtered_subcategory_xml_query': filtered_subcategory_xml_query, 
                                         'filtered_category_xml_query': filtered_category_xml_query,
-                                        'page_num': filtered_vendor.curr_page_num,
+                                        'page_num': CURR_PAGE_NUM,
                                         'num_items': MAX_RECORD_NUM}),
                 complete: function(response, status, xhr){
                     _complete_request();
-                    render_loading_progress_bar(100 * progress / filtered_vendors.length);
                 },
                 success: function(response, status, xhr){
-                    if (progress >= filtered_vendors.length - 1) render_loading_progress_bar(100);
                     response.mappings.forEach(mapping => {
-                        UOM_PRODUCT_VENDOR_MAPS.push(format_product_vendor_map(mapping, filtered_vendor, response.has_next));
+                        const formatted_mapping = format_product_vendor_map(mapping, filtered_vendor);
+                        const _mark_up = make_product_vendor_map_row_markup(PRODUCT_VENDOR_MAP_TABLE, formatted_mapping)
+                        UOM_PRODUCT_VENDOR_MAPS.push(formatted_mapping);
+                        PRODUCT_VENDOR_MAP_TABLE.find('tbody').append(_mark_up);
                     });
-                    filtered_vendor.curr_page_num = response.has_next ? filtered_vendor.curr_page_num + 1 : 0;
+                    CURR_PAGE_NUM = response.has_next ? CURR_PAGE_NUM + 1 : 0;
                 }
             });
         }
 
 
         disable_filter_elements(true, $('.order-attr-filter-opt-container'));
-        render_loading_progress_bar(0);
-        filtered_vendors.forEach((filtered_vendor, i) => {
-            (function(y) {
-                setTimeout(function() {
-                    retrieve_product_vendor_map(filtered_vendor);
-                    }, y * 5);
-                }(i));
-        });
-        
-        /*disable_button(CLEAR_FILTER_BTN, false);
-        disable_button(APPLY_FILTER_BTN, true, 'Apply Filters');*/
+        retrieve_product_vendor_map(CHOSEN_VENDOR);
     });
 
 
@@ -654,7 +589,14 @@ $(document).ready(function(){
         disable_filter_elements(false);
 
         disable_button(CLEAR_FILTER_BTN, true);
-        disable_button(APPLY_FILTER_BTN, false);
+        disable_button(APPLY_FILTER_BTN, true);
+        disable_button(LOAD_MORE_BTN, true);
+        LOAD_MORE_BTN.toggle(false);
+        CURR_PAGE_NUM = 1;
+        UOM_PRODUCT_VENDOR_MAPS = [];
+        PRODUCT_VENDOR_MAP_TABLE.find('tbody').empty();
+        CHOSEN_VENDOR = undefined;
+
         disable_filter_elements(false, $('.order-attr-filter-opt-container'));
     });
 
@@ -734,92 +676,6 @@ $(document).ready(function(){
         expand ? $(document).find(`tr[name=${parent_table_name}-row][${target_data_name}='${target_uid}'][data-isfirstidx='0']`).hide() : $(document).find(`tr[name=${parent_table_name}-row][${target_data_name}='${target_uid}'][data-isfirstidx='0']`).show();
     }
 
-    $(document).on('click', 'span[name=load-more-product-vendor-map-btn]', function(event){
-        const vendor_uid = $(this).attr('data-vendoruid');
-        const corresponding_vendor = VENDORS.filter(vendor => vendor.vendor_uid === vendor_uid)[0];
-        if (corresponding_vendor === undefined) return;
-
-        const parent_table = $(this).closest('table');
-        const parent_row = $(this).closest('tr');
-        const parent_th = $(this).closest('th');
-
-        const corresponding_mapping = UOM_PRODUCT_VENDOR_MAPS.filter(mapping => mapping.vendor_map_uid === parent_row.attr('data-vendormapuid'))[0];
-        if (corresponding_mapping === undefined) return;
-
-        corresponding_vendor.is_loading_more = true;
-
-        const disabled_apply_changes = APPLY_PRODUCT_INFO_CHANGES_BTN.attr('disabled');
-        const disabled_elements = $(`.long-txt-edit-field, .product-quantity-input-field, .form-check-input, div[name=mass-order-status-selection-opt-container], .collapse-vendor-group-btn`);
-        disable_button(APPLY_PRODUCT_INFO_CHANGES_BTN, true);
-        disable_button(CLEAR_FILTER_BTN, true);
-        disable_filter_elements(true, disabled_elements);
-        parent_th.empty();
-        parent_th.append(BSTR_BORDER_SPINNER);
-        
-        const collapse_btn = parent_row.find('span[name=collapse-vendor-group-btn]');
-        const curr_expansion_status = collapse_btn.attr('data-expand') === '1';
-        if (curr_expansion_status) expand_data_rows(collapse_btn, parent_table.attr('name'), 'data-vendoruid', vendor_uid, true);
-
-        const {
-            filtered_vendors,
-            filtered_category_xml_query,
-            filtered_subcategory_xml_query,
-            filtered_product_name_xml_query,
-            filtered_brand_xml_query,
-        } = process_filter_opts();
-
-        $.ajax({
-            type: 'POST',
-            url: 'https://prod-20.australiasoutheast.logic.azure.com:443/workflows/89b0941872fa40a2aabc91ebca4524c5/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=BLHeznQEMS8U3e6eYTo7U3bGwyzLJ7qhlOecfEFwjo4',
-            contentType: 'application/json',
-            accept: 'application/json;odata=verbose',
-            timeout: AJAX_TIMEOUT_DURATION,
-            data: JSON.stringify({'vendor_uid': corresponding_vendor.vendor_uid, 
-                                    'filtered_brand_xml_query': filtered_brand_xml_query, 
-                                    'filtered_product_name_xml_query': filtered_product_name_xml_query, 
-                                    'filtered_subcategory_xml_query': filtered_subcategory_xml_query, 
-                                    'filtered_category_xml_query': filtered_category_xml_query,
-                                    'page_num': corresponding_vendor.curr_page_num,
-                                    'num_items': MAX_RECORD_NUM}),
-            complete: function(response, status, xhr){
-                expand_data_rows(collapse_btn, parent_table.attr('name'), 'data-vendoruid', corresponding_vendor.vendor_uid, true);
-                corresponding_vendor.is_loading_more = false;
-
-                if(curr_expansion_status) expand_data_rows(collapse_btn, parent_table.attr('name'), 'data-vendoruid', corresponding_vendor.vendor_uid, false);
-                if (VENDORS.filter(vendor => vendor.is_loading_more).length < 1){
-                    if (!disabled_apply_changes) disable_button(APPLY_PRODUCT_INFO_CHANGES_BTN, false);
-                    disable_button(CLEAR_FILTER_BTN, false);
-                    disable_filter_elements(false, disabled_elements);
-                }
-            },
-            success: function(response, status, xhr){
-                let new_mappings = [];
-                const last_tr = parent_table.find(`tr[name=${parent_table.attr('name')}-row][data-vendoruid='${corresponding_vendor.vendor_uid}']:last`);
-                response.mappings.forEach(mapping => {
-                    const formatted_mapping = format_product_vendor_map(mapping, corresponding_vendor, response.has_next);
-                    UOM_PRODUCT_VENDOR_MAPS.push(formatted_mapping);
-                    new_mappings.push(formatted_mapping);
-                });
-
-                UOM_PRODUCT_VENDOR_MAPS.sort((a, b) => `${a.vendor_name}-${a.product_name}`.localeCompare(`${b.vendor_name}-${b.product_name}`));
-                const new_product_vendor_group = UOM_PRODUCT_VENDOR_MAPS.filter(mapping => mapping.vendor_uid === corresponding_vendor.vendor_uid);
-
-                new_mappings.sort((a, b) => `${a.vendor_name}-${a.product_name}`.localeCompare(`${b.vendor_name}-${b.product_name}`)).forEach(foramtted_mapping => {
-                    last_tr.after(make_product_vendor_map_row_markup(parent_table, new_product_vendor_group, foramtted_mapping, false));
-                });
-                corresponding_vendor.curr_page_num = response.has_next ? corresponding_vendor.curr_page_num + 1 : 0;
-
-                parent_th.empty();
-                parent_row.find('th').each(function(){
-                    $(this).attr('rowspan', new_product_vendor_group.length);
-                });
-                collapse_btn.attr('data-rowspan', new_product_vendor_group.length);
-                corresponding_mapping.has_next = response.has_next;
-                parent_th.append(make_load_more_product_vendor_map_btn_markup(new_product_vendor_group, corresponding_mapping));
-            }
-        });
-    });
-
 
     $(document).on('click', 'span[name=collapse-vendor-group-btn]', function(event){
         const parent_table = $(this).closest('table');
@@ -873,7 +729,7 @@ $(document).ready(function(){
             curr_value = is_int ? parseInt(curr_value.replace(/\D/g, '')) : parseFloat(curr_value.replace(/[^-?0-9.]/g, ''));
             if (isNaN(curr_value)) _invalidate_input($(this));
             const max = 1000000;
-            const min =  is_int ? 0 : 0.00000001;
+            const min =  0;
             if (curr_value <= min || curr_value > max) _invalidate_input($(this));
         });
 
@@ -904,95 +760,68 @@ $(document).ready(function(){
         const parent_tr = $(this).closest('tr');
         const is_int = $(this).attr('name') === 'stock-on-hand-input-field';
         const max = 1000000;
-        const min =  is_int ? 0 : 0.00000001;
+        const min =  0;
         const valid_input = verify_number_input($(this), is_int, min, max);
-        if (valid_input && $(this).attr('name') === 'stock-on-hand-input-field') parent_tr.find('td[name=stock-remained-txt-container]').text(_format_vendor_stock_remained(parseInt($(this).val()), parseInt(parent_tr.attr('data-vendorstockordered'))));
+        //if (valid_input && $(this).attr('name') === 'stock-on-hand-input-field') parent_tr.find('td[name=stock-remained-txt-container]').text(_format_vendor_stock_remained(parseInt($(this).val()), parseInt(parent_tr.attr('data-vendorstockordered'))));
         disable_button(APPLY_PRODUCT_INFO_CHANGES_BTN, false);
     });
 
     APPLY_PRODUCT_INFO_CHANGES_BTN.on('click', function(event){
-        function _ready_elem_for_changes(disabled=true, complete=false){
-            if (disabled){
-                disable_button(APPLY_PRODUCT_INFO_CHANGES_BTN, true, BSTR_BORDER_SPINNER);
-            }else{
-                let error_msg = 'Error Invalid Inputs detected for:';
-                PRODUCT_VENDOR_MAP_TABLE.find('tbody').find('tr').each(function(){
-                    const has_err = $(this).find(`.${ERR_INPUT_INDICATOR_CLASS}`).length > 0;
-                    if (!has_err) return;
-                    error_msg = `${error_msg}\n\t${$(this).attr('data-vendormapcode')} ${$(this).attr('data-productname')} from ${$(this).attr('data-vendorname')}`;
-                });
-                if (!complete) alert(error_msg);
-                disable_button(APPLY_PRODUCT_INFO_CHANGES_BTN, true, 'Apply Changes');
+        function _ready_elem_for_changes(complete=false){
+            if (complete) disable_button(APPLY_PRODUCT_INFO_CHANGES_BTN, true, 'Apply Changes');
+            disable_filter_elements(!complete, $(`.long-txt-edit-field, .product-quantity-input-field, .form-check-input, div[name=mass-order-status-selection-opt-container], .inner-load-more-data-row-btn`));
+            if (CURR_PAGE_NUM >= 1){
+                LOAD_MORE_BTN.toggle(complete);
+                disable_button(LOAD_MORE_BTN, !complete);
             }
-            disable_filter_elements(disabled, $(`.long-txt-edit-field, .product-quantity-input-field, .form-check-input, div[name=mass-order-status-selection-opt-container], .inner-load-more-data-row-btn`));
         }
-
+        disable_button(APPLY_PRODUCT_INFO_CHANGES_BTN, true, BSTR_BORDER_SPINNER);
         _ready_elem_for_changes();
-        const is_valid = verify_valid_info_fields(PRODUCT_VENDOR_MAP_TABLE.attr('name'));
-        if (!is_valid) return _ready_elem_for_changes(false);
 
         let sent_datas = [];
         PRODUCT_VENDOR_MAP_TABLE.find('tbody').find('tr').each(function(event){
-            const corresponding_mapping = UOM_PRODUCT_VENDOR_MAPS.filter(mapping => mapping.vendor_map_uid === $(this).attr('data-vendormapuid'))[0];
-            if (corresponding_mapping === undefined) return;
+            if (!$(this).find('input[name=vendor-map-code-input-field]').val() || is_whitespace($(this).find('input[name=vendor-map-code-input-field]').val())
+                || !$(this).find('input[name=stock-on-hand-input-field]').val() || is_whitespace($(this).find('input[name=stock-on-hand-input-field]').val())
+                || !$(this).find('input[name=vendor-price-input-field]').val() || is_whitespace($(this).find('input[name=vendor-price-input-field]').val())) return;
+            const vendor_price = parseFloat(($(this).find('input[name=vendor-price-input-field]').val()));
+            const stock_on_hand = parseInt(($(this).find('input[name=stock-on-hand-input-field]').val()));
+            const corresponding_product = UOM_PRODUCT_VENDOR_MAPS.filter(product => product.product_uid === $(this).attr('data-productuid'))[0];
+            if (vendor_price <= 0 || stock_on_hand < 1 || corresponding_product === undefined) return;
 
-            const new_map_code = $(this).find('input[name=vendor-map-code-input-field]').val().trim();
-            const new_price = parseFloat($(this).find('input[name=vendor-price-input-field]').val());
-            const new_stock_onhand = parseInt($(this).find('input[name=stock-on-hand-input-field]').val());
-            const new_active_status = $(this).find('input[name=item-active-state-switch]').prop('checked');
-
-            if (new_map_code !== corresponding_mapping.vendor_map_code
-                || new_price != corresponding_mapping.vendor_price
-                || new_stock_onhand != corresponding_mapping.vendor_stock_on_hand
-                || new_active_status != corresponding_mapping.is_active) {
-                    sent_datas.push({
-                        'map_uid': corresponding_mapping.vendor_map_uid,
-                        'new_map_code': new_map_code.trim(),
-                        'new_price': new_price,
-                        'new_stock_onhand': new_stock_onhand,
-                        'new_active_status': new_active_status,
-                    })
-                }
+            sent_datas.push({
+                'odata_id': corresponding_product.odata_id,
+                'product_uid': $(this).attr('data-productuid'),
+                'vendor_code': $(this).find('input[name=vendor-map-code-input-field]').val().trim(),
+                'vendor_price': vendor_price,
+                'stock_on_hand': stock_on_hand,
+                'active_status': $(this).find('input[name=item-active-state-switch]').prop('checked'),
+            });
         });
-
-        if (sent_datas.length < 1) return _ready_elem_for_changes(false, true);
+        if (sent_datas.length < 1 || CHOSEN_VENDOR === undefined) return _ready_elem_for_changes(true);
         $.ajax({
             type: 'POST',
-            url: 'https://prod-31.australiasoutheast.logic.azure.com:443/workflows/947d5a2faf0b4676b5e62c647b13a6b5/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lB7qaOq_ty1wO6d4WHrPQmDGW3PwrDZjy80FtmOUvSU',
+            url: 'https://prod-10.australiasoutheast.logic.azure.com:443/workflows/9c446ca7860c4c959ef3daeb9efb4afc/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=zbzH0dr5qI4AoKEwe6fRRAjF25ItC39wD5_SF4QiGNM',
             contentType: 'application/json',
             accept: 'application/json;odata=verbose',
             timeout: AJAX_TIMEOUT_DURATION,
-            data: JSON.stringify(sent_datas),
+            data: JSON.stringify({
+                    'vendor_odata_id': CHOSEN_VENDOR.odataid,
+                    'vendor_uid': CHOSEN_VENDOR.vendor_uid,
+                    'new_mappings': sent_datas.filter(sent_data => sent_data.odata_id !== undefined),
+                }),
             complete: function(response, status, xhr){
-                _ready_elem_for_changes(false, true);
+                _ready_elem_for_changes(true);
             },
             success: function(response, status, xhr){
-                sent_datas.forEach(data => {
-                    const corresponding_mapping = UOM_PRODUCT_VENDOR_MAPS.filter(mapping => mapping.vendor_map_uid === data.map_uid)[0];
-                    if (corresponding_mapping === undefined) return;
-
-                    corresponding_mapping.vendor_map_code = data.new_map_code;
-                    corresponding_mapping.vendor_price = data.new_price;
-                    corresponding_mapping.vendor_stock_on_hand = data.new_stock_onhand;
-                    corresponding_mapping.vendor_stock_remained = data.new_stock_onhand - corresponding_mapping.vendor_stock_ordered;
-                    corresponding_mapping.vendor_stock_remained_str = _format_vendor_stock_remained(data.new_stock_onhand, corresponding_mapping.vendor_stock_ordered);
-                    corresponding_mapping.is_active = data.new_active_status;
-
-                    const corresponding_tr = $(document).find(`tr[name=${PRODUCT_VENDOR_MAP_TABLE.attr('name')}-row][data-vendormapuid="${corresponding_mapping.vendor_map_uid}"]`).eq(0);
-                    corresponding_tr.find('input[name=vendor-map-code-input-field]').attr('placeholder', data.new_map_code);
-                    corresponding_tr.attr('data-vendormapcode', data.new_map_code);
-                    corresponding_tr.find('input[name=vendor-price-input-field]').attr('placeholder', data.new_price);
-                    corresponding_tr.attr('data-vendorprice', data.new_price);
-                    corresponding_tr.find('input[name=stock-on-hand-input-field]').attr('placeholder', data.new_stock_onhand);
-                    corresponding_tr.attr('data-vendorstockonhand',  data.new_stock_onhand);
-                    corresponding_tr.attr('data-isactive', data.new_active_status ? 1 : 0);
-                    corresponding_tr.attr('data-vendorstockremained', data.new_stock_onhand - corresponding_mapping.vendor_stock_ordered);
+                sent_datas.forEach(sent_data => {
+                    PRODUCT_VENDOR_MAP_TABLE.find('tbody').find(`tr[data-productuid='${sent_data.product_uid}']`).remove();
+                    UOM_PRODUCT_VENDOR_MAPS = UOM_PRODUCT_VENDOR_MAPS.filter(product => product.product_uid !== sent_data.product_uid);
                 });
-                alert('Successfully applied changes');
+                alert('Successfully added ', sent_datas.length, ` new Product-Vendor${sent_datas.length > 1 ? 's' : ''}.\nTo edit them, please go to "Product-Vendor Info" page.`);
             },
             error: function(response, status, xhr){
-                if (status === 'timeout') return alert('Request timed out, please try again later or refresh the page');
-                alert('Error applying changes');
+                if (status === "timeout") return alert('Request timed out, please try again later');
+                alert('Unable to add new Product-Vendor informations at this time');
             }
         });
     });

@@ -138,20 +138,60 @@ function _drag_element(elem){
         document.onmousemove = null;
       }
 }
+
+function data_url_to_blob(data_url) {
+    try {
+        var arr = data_url.split(',');
+        var mime = arr[0].match(/:(.*?);/)[1];
+        var bstr = atob(arr[1]);
+        var n = bstr.length;
+        var u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+    } catch (error) {
+        console.error('Error converting data URL to Blob:', error);
+        return null; // You can return null or handle the error in any other way
+    }
+}
+
+function convert_b64_img_str_to_url(mime_type, b64_str){
+    return URL.createObjectURL(data_url_to_blob(`data:${mime_type};base64,` + b64_str));
+}
+
+function convert_base64_list_to_img(uploaded_img_content){
+    let formatted_img_content = [];
+    uploaded_img_content.forEach(uploaded_img => {
+        if (is_json_data_empty(uploaded_img.prg_img_b64) || is_whitespace(uploaded_img.prg_mime_type)) return;
+        const _blob = data_url_to_blob(`data:${uploaded_img.prg_mime_type};base64,` + uploaded_img.prg_img_b64);
+        if (_blob === null) return;
+        formatted_img_content.push({
+            'img_uid': uploaded_img.prg_gappmtoimagemapid,
+            'img_url': URL.createObjectURL(_blob),
+            'mime_type': uploaded_img.prg_mime_type,
+        });
+    });
+    return formatted_img_content;
+}
+
+function covert_product_b64_img_to_url(mime_type, b64_str){
+    if (is_json_data_empty(mime_type) || is_json_data_empty(b64_str)
+    || is_whitespace(mime_type) || is_whitespace(b64_str)) return PLACE_HOLDER_IMG_URL;
+    try{return convert_b64_img_str_to_url(mime_type, b64_str);} catch(error){return PLACE_HOLDER_IMG_URL;}
+}
 /*End of Util functions*/
 
 
 function render_category_card(category_json_data){
-    const _img_url = is_json_data_empty(category_json_data.prg_img_url) ? PLACE_HOLDER_IMG_URL : category_json_data.prg_img_url;
     const _hex_colour = is_json_data_empty(category_json_data.prg_hexcolour) ? '#e6e6e4' : `#${category_json_data.prg_hexcolour.replace('#', '')}`;
-    
     $('.grid-body-content-section').append(`
         <div class='card-container category-card' name='category-card-container'
             data-uid='${category_json_data.prg_uomprocurementservicecategoriesid}'
             data-name='${category_json_data.prg_name}'
             style='background-color: ${_hex_colour}'>
             <div class='thumbnail-img-container'>
-                <img src='${_img_url}'/>
+                <img src='${covert_product_b64_img_to_url(category_json_data.crcfc_img_content_mime_type, category_json_data.crcfc_img_content)}'/>
             </div>
             <br><br>
             <div class='text-container'>
@@ -305,7 +345,7 @@ function process_product_vendor_map(products, vendor_product_maps, cart_items=un
                 'product_barcode': is_json_data_empty(product.prg_unitbarcodes) ? '' : product.prg_unitbarcodes,
                 'name': product.prg_name,
                 'trimmed_name': clean_white_space(product.prg_name.trim().toLowerCase()),
-                'thumbnail_img': is_json_data_empty(product.prg_img_url) ? PLACE_HOLDER_IMG_URL : product.prg_img_url,
+                'thumbnail_img': covert_product_b64_img_to_url(product.crcfc_img_content_mime_type, product.crcfc_img_content),
                 'remark': product.prg_remarks ?? '',
                 'min_quantity': product.prg_minorderquantity,
                 'order_unit_code': product.prg_orderunit,
@@ -316,8 +356,8 @@ function process_product_vendor_map(products, vendor_product_maps, cart_items=un
                 'category_name': product['_prg_category_value@OData.Community.Display.V1.FormattedValue'],
                 'subcategory_uid': product['_prg_subcategory_value'],
                 'subcategory_name': product['_prg_subcategory_value@OData.Community.Display.V1.FormattedValue'],
-                'brand_code': is_json_data_empty(product.prg_brand) ? -1 : product.prg_brand,
-                'brand_name': is_json_data_empty(product['prg_brand@OData.Community.Display.V1.FormattedValue']) ? 'No Brand' : product['prg_brand@OData.Community.Display.V1.FormattedValue'],
+                'brand_code': is_json_data_empty(product['_prg_brand_value']) ? -1 : product['_prg_brand_value'],
+                'brand_name': is_json_data_empty(product['_prg_brand_value@OData.Community.Display.V1.FormattedValue']) ? 'No Brand' : product['_prg_brand_value@OData.Community.Display.V1.FormattedValue'],
                 'vendor_uid': vendor_product_map['_prg_vendor_value'],
                 'vendor_name': vendor_product_map['_prg_vendor_value@OData.Community.Display.V1.FormattedValue'],
                 'vendor_map_code': vendor_product_map.prg_code,

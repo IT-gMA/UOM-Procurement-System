@@ -87,6 +87,21 @@ function disable_button(button_dom, disabled, replace_markup=null){
     }
 }
 
+function extract_sub_object(og_obj, key_pattern=''){
+    let extracted_obj = {};
+    for (const key in og_obj) {
+        if (key.startsWith(key_pattern)) extracted_obj[`${key.replace(key_pattern, "")}`] = og_obj[key];
+    }
+    return extracted_obj;
+}
+
+function format_obj_prg_key(og_obj) {
+    const new_obj = {};
+    for (const key in og_obj) {
+      if (og_obj.hasOwnProperty(key)) new_obj[key.replace(/^_/, "").replace("_value", "")] = og_obj[key];
+    }
+    return new_obj;
+}
 
 function verify_integer_input(integer_input, place_holder='', min_value=Number.NEGATIVE_INFINITY, max_value=Number.POSITIVE_INFINITY){
     let valid_input = true;
@@ -230,7 +245,7 @@ function render_product_cards(products, parent_container, show_category=false){
         // product_update_btn is a button used for changing the product or cart item in its parent grid container
         // if the item is contained within a product display grid, the button will be an "Add to Cart" button
         // else (i.e Cart Item) the button will be a "Remove from Cart" button
-        
+        //let product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='add-to-cart-btn' ${product.max_quantity - product.min_quantity < 0 ? 'disabled' : ''}>${product.max_quantity - product.min_quantity  < 0 ? 'Out of Stock' : 'Add to Cart'}</button>`;
         let product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='add-to-cart-btn' ${product.max_quantity <= 0 ? 'disabled' : ''}>${product.max_quantity  <= 0 ? 'Out of Stock' : 'Add to Cart'}</button>`;
         if (product.is_cart_item) product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='remove-cart-item-btn' id="clear-cart-btn" style='background-color: #F57F25;' data-btnlabel='Remove Item'>Remove Item</button>`;
 
@@ -291,75 +306,55 @@ function render_product_cards(products, parent_container, show_category=false){
     });
 }
 
-
-function process_product_vendor_map(products, vendor_product_maps, cart_items=undefined){
-    // Assign product-vendor map attributes to each product object accordingly
-    let non_duplicate_products = [];
-    let formatted_products = [];
-    products.forEach(product => {
-        if (non_duplicate_products.includes(product.prg_uomprocurementserviceproductsid)) return;
-        non_duplicate_products.push(product.prg_uomprocurementserviceproductsid);
-        vendor_product_maps.filter(vendor_product_map => vendor_product_map['_prg_product_value'] === product.prg_uomprocurementserviceproductsid && vendor_product_map.prg_price > 0).forEach((vendor_product_map) => {
-            let formatted_product = {
-                'uid': product.prg_uomprocurementserviceproductsid,
-                'product_barcode': is_json_data_empty(product.prg_unitbarcodes) ? '' : product.prg_unitbarcodes,
-                'name': product.prg_name,
-                'trimmed_name': clean_white_space(product.prg_name.trim().toLowerCase()),
-                'thumbnail_img': covert_product_b64_img_to_url(product.crcfc_img_content_mime_type, product.crcfc_img_content),
-                'remark': product.prg_remarks ?? '',
-                'min_quantity': product.prg_minorderquantity,
-                'order_unit_code': product.prg_orderunit,
-                'order_unit_name': product['prg_orderunit@OData.Community.Display.V1.FormattedValue'],
-                'product_size': is_json_data_empty(product.prg_productsize) ? '' : product.prg_productsize,
-                'unit_size': product.prg_unitsize,
-                'category_uid': product['_prg_category_value'],
-                'category_name': product['_prg_category_value@OData.Community.Display.V1.FormattedValue'],
-                'subcategory_uid': product['_prg_subcategory_value'],
-                'subcategory_name': product['_prg_subcategory_value@OData.Community.Display.V1.FormattedValue'],
-                'brand_code': is_json_data_empty(product['_prg_brand_value']) ? -1 : product['_prg_brand_value'],
-                'brand_name': is_json_data_empty(product['_prg_brand_value@OData.Community.Display.V1.FormattedValue']) ? 'No Brand' : product['_prg_brand_value@OData.Community.Display.V1.FormattedValue'],
-                'vendor_uid': vendor_product_map['_prg_vendor_value'],
-                'vendor_name': vendor_product_map['_prg_vendor_value@OData.Community.Display.V1.FormattedValue'],
-                'vendor_map_code': vendor_product_map.prg_code,
-                'vendor_map_uid': vendor_product_map.prg_uomprocurementserviceproductvendormapid,
-                'vendor_stock_on_hand': vendor_product_map.prg_stockonhand,
-                'vendor_stock_ordered': vendor_product_map.prg_stockorderd,
-                'price': vendor_product_map.prg_price_base,
-                'createdon': product.createdon,
-                'product_stock_on_hand': product.prg_sumstockonhand,
-                'product_stock_ordered': product.prg_sumstockordered,
-                'bulk_order_unit_code': is_json_data_empty(product.prg_bulkorder) ? 0 : product.prg_bulkorder,
-                'bulk_order_unit_name': is_json_data_empty(product.prg_bulkorder) ? 'N/A' : product['prg_bulkorder@OData.Community.Display.V1.FormattedValue'],
-                //For cart items
-                'is_cart_item': cart_items !== undefined,
-                'cart_uid': undefined,
-                'num_in_cart': -1,
-                'total_price': -1,
-            }
-            formatted_product['order_size_desc_txt'] = is_whitespace(formatted_product.product_size) ? `${formatted_product.unit_size} - ${formatted_product.order_unit_name}` : `${formatted_product.product_size} - ${formatted_product.unit_size} - ${formatted_product.order_unit_name}`;
-            //formatted_product['max_quantity'] = parseInt(Math.floor((vendor_product_map.prg_stockonhand - vendor_product_map.prg_stockorderd) / formatted_product.min_quantity));
-            //formatted_product['max_quantity'] = vendor_product_map.prg_stockonhand - vendor_product_map.prg_stockorderd;
-            formatted_product['max_quantity'] = vendor_product_map.prg_stockonhand;
-            //if (formatted_product['max_quantity'] == 0) formatted_product['max_quantity'] = formatted_product.min_quantity;
-
-            if (formatted_product.is_cart_item){
-                const cart_item = cart_items.filter(cart_item => cart_item['_prg_product_value'] === formatted_product.uid
-                                                                && cart_item['_prg_vendorcode_value'] === formatted_product.vendor_map_uid
-                                                                && cart_item['_prg_vendor_value'] === formatted_product.vendor_uid)[0];
-                if (cart_item === undefined) return;
-                formatted_product['cart_uid'] = cart_item.prg_uomprocurementorderid,
-                formatted_product['num_in_cart'] = cart_item.prg_stockordered;
-                formatted_product['total_price'] = cart_item.prg_stockordered * formatted_product['price'];
-                //formatted_product['max_quantity'] = formatted_product['max_quantity'] + formatted_product['num_in_cart'];
-            }
-            formatted_products.push(formatted_product);
-        });
-
-    });
-    // Filter out products without mapping
-    return formatted_products.filter(formatted_product => formatted_product.vendor_uid != undefined);
+function format_product_vendor_map(product, vendor_product_map, cart_item=undefined){
+    let formatted_product = {
+        'uid': product.prg_uomprocurementserviceproductsid,
+        'product_barcode': is_json_data_empty(product.prg_unitbarcodes) ? '' : product.prg_unitbarcodes,
+        'name': product.prg_name,
+        'trimmed_name': clean_white_space(product.prg_name.trim().toLowerCase()),
+        'thumbnail_img': covert_product_b64_img_to_url(product.crcfc_img_content_mime_type, product.crcfc_img_content),
+        'remark': product.prg_remarks ?? '',
+        'createdon': product.createdon,
+        'min_quantity': product.prg_minorderquantity,
+        'order_unit_code': product.prg_orderunit,
+        'order_unit_name': product['prg_orderunit@OData.Community.Display.V1.FormattedValue'],
+        'product_size': is_json_data_empty(product.prg_productsize) ? '' : product.prg_productsize,
+        'unit_size': product.prg_unitsize,
+        'category_uid': product['prg_category'],
+        'category_name': product['prg_category@OData.Community.Display.V1.FormattedValue'],
+        'subcategory_uid': product['prg_subcategory'],
+        'subcategory_name': product['prg_subcategory@OData.Community.Display.V1.FormattedValue'],
+        'brand_code': is_json_data_empty(product.prg_brand) ? -1 : product.prg_brand,
+        'brand_name': is_json_data_empty(product['prg_brand@OData.Community.Display.V1.FormattedValue']) ? 'No Brand' : product['prg_brand@OData.Community.Display.V1.FormattedValue'],
+        'vendor_uid': undefined,
+        'vendor_name': undefined,
+        'product_stock_on_hand': product.prg_sumstockonhand,
+        'product_stock_ordered': product.prg_sumstockordered,
+        'bulk_order_unit_code': is_json_data_empty(product.prg_bulkorder) ? 0 : product.prg_bulkorder,
+        'bulk_order_unit_name': is_json_data_empty(product.prg_bulkorder) ? 'N/A' : product['prg_bulkorder@OData.Community.Display.V1.FormattedValue'],
+        //Vendor product map attributes
+        'vendor_map_uid': vendor_product_map.prg_uomprocurementserviceproductvendormapid,
+        'vendor_uid': vendor_product_map.prg_vendor,
+        'vendor_name': vendor_product_map['prg_vendor@OData.Community.Display.V1.FormattedValue'],
+        'vendor_map_code': vendor_product_map.prg_code,
+        'price': vendor_product_map.prg_price_base,
+        'vendor_stock_on_hand': vendor_product_map.prg_stockonhand,
+        'vendor_stock_ordered': vendor_product_map.prg_stockorderd,
+        'max_quantity': vendor_product_map.prg_stockonhand,
+        //For cart items
+        'is_cart_item': cart_item !== undefined,
+        'cart_uid': undefined,
+        'num_in_cart': -1,
+        'total_price': -1,
+    }
+    formatted_product['order_size_desc_txt'] = is_whitespace(formatted_product.product_size) ? `${formatted_product.unit_size} - ${formatted_product.order_unit_name}` : `${formatted_product.product_size} - ${formatted_product.unit_size} - ${formatted_product.order_unit_name}`;
+    if (formatted_product.is_cart_item){
+        formatted_product['cart_uid'] = cart_item.prg_uomprocurementorderid,
+        formatted_product['num_in_cart'] = cart_item.prg_stockordered;
+        formatted_product['total_price'] = cart_item.prg_stockordered * formatted_product['price'];
+    }
+    return formatted_product;
 }
-
 
 function get_product_info_markup(info_name, info_content, is_last=false){
     return `<h6><span style='font-weight: bold;'>${info_name}: </span>${info_content}</h6>${is_last ? '' : '<br>'}`;
@@ -404,7 +399,7 @@ function render_body_content(category_uid){
 
             $('.content-section.header-section').find('.image-container').append(`<img src="${covert_product_b64_img_to_url(response['responseJSON']['category_info']['crcfc_img_content_mime_type'], response['responseJSON']['category_info']['crcfc_img_content'])}" border="0">`);
             $('#headerNameTxt').text(response['responseJSON']['category_info']['prg_name']);
-            
+
             const products = response['responseJSON']['products'];
             $.ajax({
                 type: 'POST',
@@ -424,58 +419,28 @@ function render_body_content(category_uid){
 
                     $('div[name=spinner-resource-loader-container]').hide();
                     $('div[name=progress-resource-loader-container]').show();
-                    let product_vendor_maps = [];
-                    let idx = 0;
+                    let formatted_products = [];
 
-                    function retrieve_product_vendor_map(product_uid){
-                        function _finalise_request(){
-                            render_loading_progress_bar(100 * idx / (products.length - 1 <= 0 ? 1 : products.length - 1));
-                            if (idx < products.length - 1) return idx++;
-                            const formatted_products = process_product_vendor_map(products, product_vendor_maps);
-
-                            let brand_filter_options = [];
-                            let subcategory_filter_options = [];
-                            let vendor_filter_options = [];
-
-                            formatted_products.forEach(formatted_product => {
-                                if (brand_filter_options.length < 0 || !brand_filter_options.map(item => item.value).includes(formatted_product.brand_code)) brand_filter_options.push({'value': formatted_product.brand_code, 'label': formatted_product.brand_name});
-                                if (subcategory_filter_options.length < 0 || !subcategory_filter_options.map(item => item.value).includes(formatted_product.subcategory_uid)) subcategory_filter_options.push({'value': formatted_product.subcategory_uid, 'label': formatted_product.subcategory_name});
-                                if (vendor_filter_options.length < 0 || !vendor_filter_options.map(item => item.value).includes(formatted_product.vendor_uid)) vendor_filter_options.push({'value': formatted_product.vendor_uid, 'label': formatted_product.vendor_name});
-                            });
-
-                            render_filter_options(BRAND_FILTER_DROPDOWN, brand_filter_options);
-                            render_filter_options(SUBCATEGORY_FILTER_DROPDOWN, subcategory_filter_options);
-                            render_filter_options(VENDOR_FILTER_DROPDOWN, vendor_filter_options);
-
-                            render_product_cards(formatted_products, PRODUCT_CONTAINER_SECTION, false);
-                            hide_elems_on_load(true);
-                            $('#sort-by-name-asc').prop('checked', true);
-                        }
-                        $.ajax({
-                            type: 'POST',
-                            url: 'https://prod-25.australiasoutheast.logic.azure.com:443/workflows/6405ea920a2a4c40b9165f256a12924a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=X17KcJPoRywTI5eKRhHrmqEyfV4tybM9BHFou-rdk9Q',
-                            contentType: 'application/json',
-                            accept: 'application/json;odata=verbose',
-                            timeout: AJAX_TIMEOUT_DURATION,
-                            data: JSON.stringify({'product_uid': product_uid}),
-                            complete: function(response, status, xhr){
-                                _finalise_request();
-                            },
-                            success: function(response, status, xhr){
-                                response.product_vendor_maps.forEach(product_vendor_map => {
-                                    product_vendor_maps.push(product_vendor_map);
-                                });
-                            }
-                        });
-                    }
-        
-                    products.forEach(product => {
-                        (function(y) {
-                            setTimeout(function() {
-                                retrieve_product_vendor_map(product['prg_uomprocurementserviceproductsid']);
-                                }, y * 250);
-                            }(idx));
+                    products.forEach(product_json => {
+                        formatted_products.push(format_product_vendor_map(format_obj_prg_key({...product_json}), extract_sub_object(product_json, 'product_vendor_map.')));
                     });
+                    let brand_filter_options = [];
+                    let subcategory_filter_options = [];
+                    let vendor_filter_options = [];
+
+                    formatted_products.forEach(formatted_product => {
+                        if (brand_filter_options.length < 0 || !brand_filter_options.map(item => item.value).includes(formatted_product.brand_code)) brand_filter_options.push({'value': formatted_product.brand_code, 'label': formatted_product.brand_name});
+                        if (subcategory_filter_options.length < 0 || !subcategory_filter_options.map(item => item.value).includes(formatted_product.subcategory_uid)) subcategory_filter_options.push({'value': formatted_product.subcategory_uid, 'label': formatted_product.subcategory_name});
+                        if (vendor_filter_options.length < 0 || !vendor_filter_options.map(item => item.value).includes(formatted_product.vendor_uid)) vendor_filter_options.push({'value': formatted_product.vendor_uid, 'label': formatted_product.vendor_name});
+                    });
+
+                    render_filter_options(BRAND_FILTER_DROPDOWN, brand_filter_options);
+                    render_filter_options(SUBCATEGORY_FILTER_DROPDOWN, subcategory_filter_options);
+                    render_filter_options(VENDOR_FILTER_DROPDOWN, vendor_filter_options);
+
+                    render_product_cards(formatted_products, PRODUCT_CONTAINER_SECTION, false);
+                    hide_elems_on_load(true);
+                    $('#sort-by-name-asc').prop('checked', true);
                 }
             });
         }
@@ -530,7 +495,7 @@ function sort_product(sort_radio_dom){
 
 $(document).ready(function(){
     const url_params = new URLSearchParams(window.location.search);
-    const category_uid = 'a5b4487f-7919-ee11-8f6d-002248933ec4';//url_params.get('category-uid');
+    const category_uid = '3fcdebbc-7919-ee11-8f6d-002248117628';  //url_params.get('category-uid');
     $('#backHomeNav').on('click', function(event){return window.location = window.location.origin;});
 
     _drag_element(document.getElementById('cart-btn-container'));
@@ -696,47 +661,19 @@ $(document).ready(function(){
                 }
                 const cart_items = response['responseJSON']['cart_items'];
 
-                let product_vendor_maps = [];
-                let products = [];
-                let idx = 0;
+                modal_content_body.find('.modal-body').empty();
+                modal_content_body.find('.modal-body').append(`<div class="cart-item-container-section"></div>`);
 
-                function retrieve_cart_item_product_info(cart_item){
-                    function _finalise_request(){
-                        if (idx < cart_items.length - 1) return idx++;
-                        modal_content_body.find('.modal-body').empty();
-                        modal_content_body.find('.modal-body').append(`<div class="cart-item-container-section"></div>`);
-                        const formatted_products = process_product_vendor_map(products, product_vendor_maps, cart_items);
-                        
-                        render_product_cards(formatted_products, modal_content_body.find('.cart-item-container-section'), false);
-                        write_cart_modal_header(CART_CONTAINER_MODAL.find('.modal-title'), formatted_products);
-                        CART_CONTAINER_MODAL.find('.modal-footer').toggle(formatted_products.length > 0);
-
-                        CART_BUTTON.attr('data-quantity', formatted_products.length);
-                        CART_BUTTON.find('[name=cart-item-num]').eq(0).text(formatted_products.length);
-                    }
-                    $.ajax({
-                        type: 'POST',
-                        url: 'https://prod-03.australiasoutheast.logic.azure.com:443/workflows/d5232e14c5a248cfbfa4ec06581c548b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=EXC8jJ8M0MrqyOoYImvQOMRRiJtzRFrd7JBIgWZZ-dE',
-                        contentType: 'application/json',
-                        accept: 'application/json;odata=verbose',
-                        timeout: AJAX_TIMEOUT_DURATION,
-                        data: JSON.stringify({'map_uid': cart_item['_prg_vendorcode_value'], 'product_uid': cart_item['_prg_product_value']}),
-                        complete: function(response, status, xhr){
-                            if (String(status) !== 'success') return _finalise_request();
-                            product_vendor_maps.push(response['responseJSON']['product_vendor_map']);
-                            products.push(response['responseJSON']['product']);
-                            _finalise_request();
-                        }
-                    });
-                }
-
+                let formatted_products = [];
                 cart_items.forEach(cart_item => {
-                    (function(y) {
-                        setTimeout(function() {
-                            retrieve_cart_item_product_info(cart_item);
-                            }, y * 280);
-                        }(idx));
-                })
+                    console.log(format_obj_prg_key(extract_sub_object({...cart_item}, 'product.')));
+                    formatted_products.push(format_product_vendor_map(format_obj_prg_key(extract_sub_object({...cart_item}, 'product.')), extract_sub_object({...cart_item}, 'product_vendor_map.'), cart_item));
+                });
+                render_product_cards(formatted_products, modal_content_body.find('.cart-item-container-section'), false);
+                write_cart_modal_header(CART_CONTAINER_MODAL.find('.modal-title'), formatted_products);
+                CART_CONTAINER_MODAL.find('.modal-footer').toggle(formatted_products.length > 0);
+                CART_BUTTON.attr('data-quantity', formatted_products.length);
+                CART_BUTTON.find('[name=cart-item-num]').eq(0).text(formatted_products.length);
             }
         });
     });
@@ -820,7 +757,7 @@ $(document).ready(function(){
                     input_field.attr('data-maxquantity', new_max_quantity);
                     if (input_val < 1 && update_cart_item['update_success']) cart_item_grid_elem.remove();
                     _finalise_request();
-                }
+                },
             });
         }
         if (update_cart_items.length < 1) {

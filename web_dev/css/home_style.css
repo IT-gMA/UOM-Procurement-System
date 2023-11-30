@@ -17,6 +17,7 @@
     --hover-neumorphic-off-wht-bxshadow: 5px 5px 4px #e6e5e2, -5px -5px 4px #ffffff !important;
     --active-neumorphic-off-wht-bxshadow: inset 5px 5px 4px #e6e5e2, inset -5px -5px 4px #ffffff !important;
     --inset-neumorphic-off-white-bx-shadow: inset 5px 5px 10px #e6e5e2, inset -5px -5px 10px #ffffff;
+
     --border-off-white-solid: solid var(--clr-off-white-primary) !important;
 
     --border-charcoal-solid: solid var(--clr-programmed-charcoal-400) !important;
@@ -30,6 +31,13 @@
     --skewed-charcoal-box-shadow4: .075em .075em var(--clr-programmed-charcoal-400) !important;
     --skewed-charcoal-box-shadow5: .05em .05em var(--clr-programmed-charcoal-400) !important;
     --skewed-charcoal-box-shadow6: .025em .025em var(--clr-programmed-charcoal-400) !important;
+
+    --inset-skewed-charcoal-box-shadow: inset .2em .2em var(--clr-programmed-charcoal-400) !important;
+    --inset-skewed-charcoal-box-shadow2: inset .15em .15em var(--clr-programmed-charcoal-400) !important;
+    --inset-skewed-charcoal-box-shadow3: inset .1em .1em var(--clr-programmed-charcoal-400) !important;
+    --inset-skewed-charcoal-box-shadow4: inset .075em .075em var(--clr-programmed-charcoal-400) !important;
+    --inset-skewed-charcoal-box-shadow5: inset .05em .05em var(--clr-programmed-charcoal-400) !important;
+    --inset-skewed-charcoal-box-shadow6: inset .025em .025em var(--clr-programmed-charcoal-400) !important;
 }
 
 h1, h2{
@@ -243,6 +251,19 @@ body{
     border-width: .15em !important;
 }
 
+
+.opt-selection-btn.long-selection-btn:hover{
+    background-color: var(--clr-green-primary-200) !important;
+}
+
+.opt-selection-btn.long-selection-btn:active, .opt-selection-btn.long-selection-btn:focus{
+    background-color: var(--clr-green-primary-400) !important;
+}
+
+.opt-selection-btn.long-selection-btn:active > .nav-link, .opt-selection-btn.long-selection-btn:focus > .nav-link{
+    color: white !important;
+}
+
 .search-bar-container:hover, .product-quantity-input-field:hover
 .search-bar-container:active, .product-quantity-input-field:active
 .search-bar-container:focus, .product-quantity-input-field:hover,
@@ -285,8 +306,7 @@ form input:hover, form textarea:hover, form input:hover, form textarea:hover, fo
     box-shadow: var(--skewed-charcoal-box-shadow2) !important;
 }
 
-.thumbnail-img-container, .text-container, .thumbnail-img-container img, .product-description-container,
-.overflow-scroll{
+.thumbnail-img-container, .text-container, .thumbnail-img-container img, .product-description-container{
     position: relative !important;
 }
 
@@ -368,6 +388,17 @@ form input:hover, form textarea:hover, form input:hover, form textarea:hover, fo
     width: 95% !important;
 }
 
+.opt-selection-btn.long-selection-btn a{
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 30ch !important;   
+}
+
+.opt-selection-btn.long-selection-btn{
+    background-color: var(--clr-pfm-light-grey-400) !important;
+}
+
 .opt-selection-btn, .search-filter-container .filter-container{
     display: block !important;
     border: none !important;
@@ -389,6 +420,16 @@ tr .product-quantity-input-field.integer-input, tr input, tr .product-quantity-i
 
 tr .long-txt-edit-field .long-txt-edit-field{
     min-width: 200px !important;
+}
+
+.opt-selection-btn.long-selection-btn .nav-link{
+    text-align: left !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 25ch !important;
+
+    color: var(--clr-programmed-charcoal-400) !important;
 }
 
 .opt-selection-btn .nav-link{
@@ -440,9 +481,12 @@ tr .long-txt-edit-field .long-txt-edit-field{
 
 /*Search field styling*/
 
+.long-txt-edit-field.area-txt-edit-field, .area-txt-edit-field{
+    border-radius: .5rem !important;
+}
 .search-bar-container, .search-and-filter-section .btn.btn-primary, .product-quantity-input-field,
 .cart-modal-btn-container .btn.btn-primary, .progress, .filter-container, .long-txt-edit-field{
-    border-radius: 10000px !important;
+    border-radius: var(--pill-shaped-border-radius) !important;
 }
 
 .search-bar-container{
@@ -628,6 +672,10 @@ form input, form textarea, form input:hover, form textarea:hover, form input:act
     color: red !important;
 }
 
+.long-txt-edit-field.border-effect.color-picker-input-field, .color-picker-input-field, .long-txt-edit-field.color-picker-input-field{
+    padding: 0 !important;
+}
+
 .long-txt-edit-field, .product-quantity-input-field{
     position: relative !important;
     padding: 0 1em !important;
@@ -796,6 +844,7 @@ form input, form textarea, form input:hover, form textarea:hover, form input:act
 .sticky-top{
     background-color: var(--clr-green-primary-200) !important;
     border-bottom: var(--border-charcoal-solid) !important;
+    z-index: 100 !important;
 }
 
 .span-grouped-row{
@@ -912,6 +961,150 @@ span[name='collapse-vendor-group-btn'], .inner-load-more-data-row-btn{
     color: var(--clr-green-primary-400);
     transform: rotate(180deg);
 }
+
+/*Drag and Drop field styling*/
+.drag-and-drop-section{
+    display: flex;
+    padding: 2em !important;
+}
+
+.drag-drop-container h3{
+    font-weight: bold !important;
+    font-size: x-large !important;
+}
+
+.drag-drop-container .file-upload-form .form-group, .drag-and-drop-section{
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    color: var(--clr-programmed-charcoal-400) !important;
+}
+
+.drag-drop-container .file-upload-form .form-group{
+    display: grid !important;
+    grid-template-columns: [first] 100% !important;
+}
+
+.drag-drop-container .file-upload-form .form-group .custom-file-input, 
+.drag-drop-container .file-upload-form .form-group .upload-label, #UploadImgInput{
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+}
+
+.drag-drop-container .file-upload-form .form-group .upload-label .chosen-file-name{
+    text-decoration: none !important;
+    font-weight: bold !important;
+    color: var(--clr-pfm-light-grey-400);
+}
+
+.drag-drop-container .file-upload-form .form-group .custom-file-input, #UploadImgInput{
+    display: grid !important;
+    position: relative !important;
+    border: none !important;
+    border-radius: 1rem !important;
+    padding: 3rem !important;
+    height: 400px !important;
+    width: 500px !important;
+
+
+    overflow: hidden !important;
+    
+    box-shadow: rgb(61, 57, 53, .8) 3px 3px 6px 0px inset, rgba(255, 255, 255, .5) -3px -3px 6px 1px inset !important;
+    font-weight: bold !important;
+    color: var(--clr-programmed-charcoal-400) !important;
+}
+
+.drag-drop-container .file-upload-form .form-group .custom-file-input:hover, #UploadImgInput:hover{
+    box-shadow: rgb(61, 57, 53) 4px 4px 8px 0px inset, rgba(255, 255, 255, 0.5) -4px -4px 8px 1px inset !important;
+}
+
+.drag-drop-container .file-upload-form .form-group .custom-file-input:active, 
+.drag-drop-container .file-upload-form .form-group .custom-file-input:focus,
+#UploadImgInput:active, #UploadImgInput:hover{
+    box-shadow: rgb(61, 57, 53, .8) 5px 5px 10px 0px inset, rgba(255, 255, 255, .5) -5px -5px 10px 1px inset !important;
+}
+
+.drag-drop-container .btn.btn-primary{
+    max-width: 300px !important;
+}
+
+.custom-file-input::file-selector-button, .custom-file-input::-webkit-file-upload-button,
+#UploadImgInput::file-selector-button, #UploadImgInput::-webkit-file-upload-button
+{
+    display: none !important;
+}
+/*End of drag and Drop field styling*/
+
+/*Header Section styling*/
+.content-section.header-section, .header-section{
+    cursor: pointer !important;
+    margin-top: 0 !important;
+    width: 100vw !important;
+}
+
+.content-section.header-section .mask, .content-section.header-section .image-container img{
+    width: 100% !important;
+    height: 200px !important;
+    top: 0 !important;
+    left: 0 !important;
+    transition: ease-in-out .5s !important;
+}
+
+.content-section.header-section .mask{
+    display: grid !important;
+    position: absolute !important;
+    background-color: rgba(0,0,0,.6) !important;
+    backdrop-filter: blur(3px) !important;
+    -webkit-backdrop-filter: blur(3px) !important;
+}
+
+.content-section.header-section:hover > .mask{
+    background-color: rgba(0,0,0,.5) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+}
+
+.content-section.header-section:focus > .mask, .content-section.header-section:active > .mask{
+    background-color: rgba(0,0,0,.55) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+}
+
+.content-section.header-section .image-container, .content-section.header-section .mask, .header-txt-content-container{
+    grid-area: 1 !important;
+    width: 100% !important;
+}
+
+.content-section.header-section .image-container img{
+    object-fit: cover !important;
+    z-index: 0 !important;
+}
+
+.header-txt-content-container{
+    color: white !important;
+    font-weight: bold !important;
+    display: grid !important;
+    grid-template-columns: 1fr 2fr !important;
+    padding: 0 2em !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+#headerNameTxt{
+    display: grid !important;
+    text-align: right !important;
+    padding: 0 1em 0 0 !important;
+}
+
+#backHomeNav .material-symbols-rounded{
+    font-weight: bold !important;
+    margin-right: .5em !important;
+}
+#backHomeNav:hover, #backHomeNav:active, #backHomeNav:focus{
+    text-decoration: underline;
+}
+/*End of Header Section styling*/
 
 /*Mobile adaptive design*/
 /* styling for grid on mobile */
@@ -1077,6 +1270,17 @@ span[name='collapse-vendor-group-btn'], .inner-load-more-data-row-btn{
         margin: .45em !important;
     }
     /*End of Order History content section styling*/
+
+    /*Header section styling*/
+    .content-section.header-section .mask, .content-section.header-section .image-container img{
+        height: 150px !important;
+    }
+
+    .header-txt-content-container{
+        padding: 0 1em !important;
+        font-size: .95em !important;
+    }
+    /*End of Header section styling*/
 }
 
 @media (max-width: 320px) {
@@ -1084,6 +1288,15 @@ span[name='collapse-vendor-group-btn'], .inner-load-more-data-row-btn{
         grid-template-columns: 1fr !important;
         padding: .5em 1em !important;
     }
+    /*Header section styling*/
+    .content-section.header-section .mask, .content-section.header-section .image-container img{
+        height: 125px !important;
+    }
+    .header-txt-content-container{
+        padding: 0 .75em !important;
+        font-size: .8em !important;
+    }
+    /*End of Header section styling*/
 }
 
 /*Ultra Wide screen*/

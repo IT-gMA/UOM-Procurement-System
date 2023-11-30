@@ -2,13 +2,12 @@ const CUSTOMER_UID = 'e391c7cb-e9c7-ed11-b597-00224897d329';
 
 const AJAX_TIMEOUT_DURATION = 864000000;
 const PLACE_HOLDER_IMG_URL = 'https://i.ibb.co/VMPPhzc/place-holder-catering-item-img.webp';
-const APPLY_FILTER_BTN = $('button[name=apply-search-filter-btn]');
-const CLEAR_FILTER_BTN = $('button[name=clear-search-filter-btn]');
+const APPLY_SEARCH_BTN = $('button[name=apply-search-filter-btn]');
 const PRODUCT_SEARCH_TEXT_FIELD = $('input[name=product-search-input-field]');
 const BSTR_BORDER_SPINNER = `<div class="spinner-border" role="status">
                                 <span class="visually-hidden">Loading...</span>
                             </div>`;
-const PRODUCT_CONTAINER_SECTION = $('section[name=product-container-section]');
+const PRODUCT_CONTAINER_MODAL = $('div[name=product-container-modal]');
 const CART_CONTAINER_MODAL = $('div[name=cart-item-container-modal]');
 let IS_MAKING_ORDER = false;
 let IS_UPDATING_CART = false;
@@ -17,17 +16,6 @@ const CART_BUTTON = $('div[name=shopping-cart-button]');
 const UPDATE_CART_BTN = $('button[name=update-cart-btn]');
 const CLEAR_CART_BTN = $('button[name=clear-cart-btn]');
 const CHECKOUT_CART_BTN = $('button[name=go-to-checkout-btn]');
-
-const PROGRESS_BAR_DOM = $('div[name=request-loader-progress-bar]');
-
-const VENDOR_FILTER_DROPDOWN = $('ul[name=vendor-filter-opts]');
-const SUBCATEGORY_FILTER_DROPDOWN = $('ul[name=sub-category-filter-opts]');
-const BRAND_FILTER_DROPDOWN = $('ul[name=brand-filter-opts]');
-let product_filter_checkbox_func_names = '';
-const FILTER_DROPDOWNS = [VENDOR_FILTER_DROPDOWN, SUBCATEGORY_FILTER_DROPDOWN, BRAND_FILTER_DROPDOWN];
-FILTER_DROPDOWNS.forEach((dropdown, idx) => {
-    product_filter_checkbox_func_names += `input[name=${dropdown.attr('name')}-checkbox]${idx < FILTER_DROPDOWNS.length - 1 ? ', ' : ''}`;
-});
 
 /*Util Functions*/
 function get_user_id(){
@@ -57,12 +45,6 @@ function get_category_relative_path(category_uid){
     return `${window.location.origin}/view-products?category-uid=${category_uid}`;
 }
 
-function _get_text_padding(max_length, curr_txt){
-    let padding_length = max_length - curr_txt.length - 1;
-    if (padding_length < 1) padding_length = 1;
-    return `${curr_txt}${` &nbsp; `.repeat(padding_length)}`;
-}
-
 function is_json_data_empty(data){
     if ([null, undefined].includes(data)) return true;
     if (typeof data == 'string') return is_whitespace(data);
@@ -70,8 +52,6 @@ function is_json_data_empty(data){
 }
 
 function hide_elems_on_load(complete=false){
-    $('div[name=progress-resource-loader-container]').toggle(false);
-
     // Hide / Show Main content sections / containers
     $('.content-section').toggle(complete);
     // Hide / Show loading progress / loader
@@ -87,8 +67,26 @@ function disable_button(button_dom, disabled, replace_markup=null){
     }
 }
 
+function extract_sub_object(og_obj, key_pattern=''){
+    let extracted_obj = {};
+    for (const key in og_obj) {
+        if (key.startsWith(key_pattern)) extracted_obj[`${key.replace(key_pattern, "")}`] = og_obj[key];
+    }
+    return extracted_obj;
+}
+
+function format_obj_prg_key(og_obj) {
+    const new_obj = {};
+    for (const key in og_obj) {
+      if (og_obj.hasOwnProperty(key)) new_obj[key.replace(/^_/, "").replace("_value", "")] = og_obj[key];
+    }
+    return new_obj;
+}
+
 
 function verify_integer_input(integer_input, place_holder='', min_value=Number.NEGATIVE_INFINITY, max_value=Number.POSITIVE_INFINITY){
+    // Format an Input text Field's value to integers and verify whether the resulting integer
+    // is within the min max range. If the value is out of range assign it with min or max value
     let valid_input = true;
     let curr_value = integer_input.val();
     if (!integer_input.val() || is_whitespace(curr_value)) return valid_input;
@@ -157,14 +155,6 @@ function _drag_element(elem){
       }
 }
 
-function render_loading_progress_bar(curr_progress=0){
-    curr_progress = curr_progress < 0 ? 0 : curr_progress;
-    curr_progress = curr_progress > 100 ? 100 : curr_progress;
-
-    PROGRESS_BAR_DOM.attr('aria-valuenow', curr_progress);
-    PROGRESS_BAR_DOM.css('width', `${curr_progress}%`);
-}
-
 function data_url_to_blob(data_url) {
     try {
         var arr = data_url.split(',');
@@ -204,20 +194,41 @@ function convert_base64_list_to_img(uploaded_img_content){
 function covert_product_b64_img_to_url(mime_type, b64_str){
     if (is_json_data_empty(mime_type) || is_json_data_empty(b64_str)
     || is_whitespace(mime_type) || is_whitespace(b64_str)) return PLACE_HOLDER_IMG_URL;
-    try{
-        return convert_b64_img_str_to_url(mime_type, b64_str);
-    }catch(error){
-        return PLACE_HOLDER_IMG_URL;
-    }
+    try{return convert_b64_img_str_to_url(mime_type, b64_str);} catch(error){return PLACE_HOLDER_IMG_URL;}
 }
 /*End of Util functions*/
 
 
-function write_cart_modal_header(header_dom, cart_items){
-    let cart_price = 0;
-    cart_items.forEach(cart_item => {cart_price += cart_item.total_price});
-    header_dom.text(`${cart_items.length} product${cart_items.length > 1 ? 's' : ''} in your cart for a total of $${cart_price.toFixed(2)}`);
+function render_category_card(category_json_data){
+    const _hex_colour = is_json_data_empty(category_json_data.prg_hexcolour) ? '#e6e6e4' : `#${category_json_data.prg_hexcolour.replace('#', '')}`;
+    $('.grid-body-content-section').append(`
+        <div class='card-container category-card' name='category-card-container'
+            data-uid='${category_json_data.prg_uomprocurementservicecategoriesid}'
+            data-name='${category_json_data.prg_name}'
+            style='background-color: ${_hex_colour}'>
+            <div class='thumbnail-img-container'>
+                <img src='${covert_product_b64_img_to_url(category_json_data.crcfc_img_content_mime_type, category_json_data.crcfc_img_content)}'/>
+            </div>
+            <br><br>
+            <div class='text-container'>
+                <div class='desc-txt_bx'>
+                    <div class='desc-txt_bx'>
+                        <span style='font-weight: bold;'>${category_json_data.prg_name}</span>
+                    </div>
+                </div>
+                <span class="material-symbols-rounded">chevron_right</span>
+            </div>
+            <br>
+        </div>`);
 }
+
+
+function _get_text_padding(max_length, curr_txt){
+    let padding_length = max_length - curr_txt.length - 1;
+    if (padding_length < 1) padding_length = 1;
+    return `${curr_txt}${` &nbsp; `.repeat(padding_length)}`;
+}
+
 
 function render_product_cards(products, parent_container, show_category=false){
     const longest_category_name = products.sort((a, b) => b.category_name.length - a.category_name.length)[0]['category_name'].length;
@@ -230,7 +241,7 @@ function render_product_cards(products, parent_container, show_category=false){
         // product_update_btn is a button used for changing the product or cart item in its parent grid container
         // if the item is contained within a product display grid, the button will be an "Add to Cart" button
         // else (i.e Cart Item) the button will be a "Remove from Cart" button
-        
+        //let product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='add-to-cart-btn' ${product.max_quantity - product.min_quantity < 0 ? 'disabled' : ''}>${product.max_quantity - product.min_quantity  < 0 ? 'Out of Stock' : 'Add to Cart'}</button>`;
         let product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='add-to-cart-btn' ${product.max_quantity <= 0 ? 'disabled' : ''}>${product.max_quantity  <= 0 ? 'Out of Stock' : 'Add to Cart'}</button>`;
         if (product.is_cart_item) product_update_btn = `<button type='button' class='btn btn-primary add-to-cart-btn' name='remove-cart-item-btn' id="clear-cart-btn" style='background-color: #F57F25;' data-btnlabel='Remove Item'>Remove Item</button>`;
 
@@ -292,72 +303,98 @@ function render_product_cards(products, parent_container, show_category=false){
 }
 
 
-function process_product_vendor_map(products, vendor_product_maps, cart_items=undefined){
-    // Assign product-vendor map attributes to each product object accordingly
-    let non_duplicate_products = [];
-    let formatted_products = [];
-    products.forEach(product => {
-        if (non_duplicate_products.includes(product.prg_uomprocurementserviceproductsid)) return;
-        non_duplicate_products.push(product.prg_uomprocurementserviceproductsid);
-        vendor_product_maps.filter(vendor_product_map => vendor_product_map['_prg_product_value'] === product.prg_uomprocurementserviceproductsid && vendor_product_map.prg_price > 0).forEach((vendor_product_map) => {
-            let formatted_product = {
-                'uid': product.prg_uomprocurementserviceproductsid,
-                'product_barcode': is_json_data_empty(product.prg_unitbarcodes) ? '' : product.prg_unitbarcodes,
-                'name': product.prg_name,
-                'trimmed_name': clean_white_space(product.prg_name.trim().toLowerCase()),
-                'thumbnail_img': covert_product_b64_img_to_url(product.crcfc_img_content_mime_type, product.crcfc_img_content),
-                'remark': product.prg_remarks ?? '',
-                'min_quantity': product.prg_minorderquantity,
-                'order_unit_code': product.prg_orderunit,
-                'order_unit_name': product['prg_orderunit@OData.Community.Display.V1.FormattedValue'],
-                'product_size': is_json_data_empty(product.prg_productsize) ? '' : product.prg_productsize,
-                'unit_size': product.prg_unitsize,
-                'category_uid': product['_prg_category_value'],
-                'category_name': product['_prg_category_value@OData.Community.Display.V1.FormattedValue'],
-                'subcategory_uid': product['_prg_subcategory_value'],
-                'subcategory_name': product['_prg_subcategory_value@OData.Community.Display.V1.FormattedValue'],
-                'brand_code': is_json_data_empty(product['_prg_brand_value']) ? -1 : product['_prg_brand_value'],
-                'brand_name': is_json_data_empty(product['_prg_brand_value@OData.Community.Display.V1.FormattedValue']) ? 'No Brand' : product['_prg_brand_value@OData.Community.Display.V1.FormattedValue'],
-                'vendor_uid': vendor_product_map['_prg_vendor_value'],
-                'vendor_name': vendor_product_map['_prg_vendor_value@OData.Community.Display.V1.FormattedValue'],
-                'vendor_map_code': vendor_product_map.prg_code,
-                'vendor_map_uid': vendor_product_map.prg_uomprocurementserviceproductvendormapid,
-                'vendor_stock_on_hand': vendor_product_map.prg_stockonhand,
-                'vendor_stock_ordered': vendor_product_map.prg_stockorderd,
-                'price': vendor_product_map.prg_price_base,
-                'createdon': product.createdon,
-                'product_stock_on_hand': product.prg_sumstockonhand,
-                'product_stock_ordered': product.prg_sumstockordered,
-                'bulk_order_unit_code': is_json_data_empty(product.prg_bulkorder) ? 0 : product.prg_bulkorder,
-                'bulk_order_unit_name': is_json_data_empty(product.prg_bulkorder) ? 'N/A' : product['prg_bulkorder@OData.Community.Display.V1.FormattedValue'],
-                //For cart items
-                'is_cart_item': cart_items !== undefined,
-                'cart_uid': undefined,
-                'num_in_cart': -1,
-                'total_price': -1,
+function render_body_content(){
+    // Retrieve Categories from UOM Procurement Service Categories Dataverse Table
+    $.ajax({
+        type: 'POST',
+        url: 'https://prod-26.australiasoutheast.logic.azure.com:443/workflows/3dc091c8db904dd0b1a0ce905a2c727c/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JriRMMLFOymepwZQCU-oreQsQFnur7a4AD2cOqcLmhc',
+        contentType: 'application/json',
+        accept: 'application/json;odata=verbose',
+        timeout: AJAX_TIMEOUT_DURATION,
+        complete: function(response, status, xhr){
+            if (String(status) !== 'success'){
+                alert('Unable to load data at this time');
+                return hide_elems_on_load(true);
             }
-            formatted_product['order_size_desc_txt'] = is_whitespace(formatted_product.product_size) ? `${formatted_product.unit_size} - ${formatted_product.order_unit_name}` : `${formatted_product.product_size} - ${formatted_product.unit_size} - ${formatted_product.order_unit_name}`;
-            //formatted_product['max_quantity'] = parseInt(Math.floor((vendor_product_map.prg_stockonhand - vendor_product_map.prg_stockorderd) / formatted_product.min_quantity));
-            //formatted_product['max_quantity'] = vendor_product_map.prg_stockonhand - vendor_product_map.prg_stockorderd;
-            formatted_product['max_quantity'] = vendor_product_map.prg_stockonhand;
-            //if (formatted_product['max_quantity'] == 0) formatted_product['max_quantity'] = formatted_product.min_quantity;
+            const category_json_datas = response['responseJSON'];
+            // Retrieve User In Cart Items from UOM Procurement Order Dataverse Table
+            // Only query the number of items in cart
+            $.ajax({
+                type: 'POST',
+                url: 'https://prod-15.australiasoutheast.logic.azure.com:443/workflows/3e23899232174009b8be511c7a43412d/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=G4Ydf5oYEVZlgQTb4JjS1UFpdaVccR8zXWrIGRtE2cs',
+                contentType: 'application/json',
+                accept: 'application/json;odata=verbose',
+                timeout: AJAX_TIMEOUT_DURATION,
+                data: JSON.stringify({"customer_uid": CUSTOMER_UID, 'query_num_items_only': true}),
+                complete: function(response, status, xhr){
+                    if (String(status) !== 'success'){
+                        alert('Unable to load data at this time');
+                        return hide_elems_on_load(true);
+                    }
+                    category_json_datas.forEach(category_json_data => {
+                        // Append each Category Json Object as an HTML card to its parent grid container
+                        render_category_card(category_json_data);
+                    });
 
-            if (formatted_product.is_cart_item){
-                const cart_item = cart_items.filter(cart_item => cart_item['_prg_product_value'] === formatted_product.uid
-                                                                && cart_item['_prg_vendorcode_value'] === formatted_product.vendor_map_uid
-                                                                && cart_item['_prg_vendor_value'] === formatted_product.vendor_uid)[0];
-                if (cart_item === undefined) return;
-                formatted_product['cart_uid'] = cart_item.prg_uomprocurementorderid,
-                formatted_product['num_in_cart'] = cart_item.prg_stockordered;
-                formatted_product['total_price'] = cart_item.prg_stockordered * formatted_product['price'];
-                //formatted_product['max_quantity'] = formatted_product['max_quantity'] + formatted_product['num_in_cart'];
-            }
-            formatted_products.push(formatted_product);
-        });
-
+                    // Assign Cart button num items indicator with the retrieved num_items_orderd value
+                    const num_ordered = response['responseJSON']['num_items_orderd'];
+                    CART_BUTTON.attr('data-quantity', num_ordered);
+                    CART_BUTTON.find('[name=cart-item-num]').eq(0).text(num_ordered);
+                    hide_elems_on_load(true);
+                }
+            });
+        }
     });
-    // Filter out products without mapping
-    return formatted_products.filter(formatted_product => formatted_product.vendor_uid != undefined);
+}
+
+function format_product_vendor_map(product, vendor_product_map, cart_item=undefined){
+    let formatted_product = {
+        'uid': product.prg_uomprocurementserviceproductsid,
+        'product_barcode': is_json_data_empty(product.prg_unitbarcodes) ? '' : product.prg_unitbarcodes,
+        'name': product.prg_name,
+        'trimmed_name': clean_white_space(product.prg_name.trim().toLowerCase()),
+        'thumbnail_img': covert_product_b64_img_to_url(product.crcfc_img_content_mime_type, product.crcfc_img_content),
+        'remark': product.prg_remarks ?? '',
+        'createdon': product.createdon,
+        'min_quantity': product.prg_minorderquantity,
+        'order_unit_code': product.prg_orderunit,
+        'order_unit_name': product['prg_orderunit@OData.Community.Display.V1.FormattedValue'],
+        'product_size': is_json_data_empty(product.prg_productsize) ? '' : product.prg_productsize,
+        'unit_size': product.prg_unitsize,
+        'category_uid': product['prg_category'],
+        'category_name': product['prg_category@OData.Community.Display.V1.FormattedValue'],
+        'subcategory_uid': product['prg_subcategory'],
+        'subcategory_name': product['prg_subcategory@OData.Community.Display.V1.FormattedValue'],
+        'brand_code': is_json_data_empty(product.prg_brand) ? -1 : product.prg_brand,
+        'brand_name': is_json_data_empty(product['prg_brand@OData.Community.Display.V1.FormattedValue']) ? 'No Brand' : product['prg_brand@OData.Community.Display.V1.FormattedValue'],
+        'vendor_uid': undefined,
+        'vendor_name': undefined,
+        'product_stock_on_hand': product.prg_sumstockonhand,
+        'product_stock_ordered': product.prg_sumstockordered,
+        'bulk_order_unit_code': is_json_data_empty(product.prg_bulkorder) ? 0 : product.prg_bulkorder,
+        'bulk_order_unit_name': is_json_data_empty(product.prg_bulkorder) ? 'N/A' : product['prg_bulkorder@OData.Community.Display.V1.FormattedValue'],
+        //Vendor product map attributes
+        'vendor_map_uid': vendor_product_map.prg_uomprocurementserviceproductvendormapid,
+        'vendor_uid': vendor_product_map.prg_vendor,
+        'vendor_name': vendor_product_map['prg_vendor@OData.Community.Display.V1.FormattedValue'],
+        'vendor_map_code': vendor_product_map.prg_code,
+        'price': vendor_product_map.prg_price_base,
+        'vendor_stock_on_hand': vendor_product_map.prg_stockonhand,
+        'vendor_stock_ordered': vendor_product_map.prg_stockorderd,
+        'max_quantity': vendor_product_map.prg_stockonhand,
+        //For cart items
+        'is_cart_item': cart_item !== undefined,
+        'cart_uid': undefined,
+        'num_in_cart': -1,
+        'total_price': -1,
+    }
+    formatted_product['order_size_desc_txt'] = is_whitespace(formatted_product.product_size) ? `${formatted_product.unit_size} - ${formatted_product.order_unit_name}` : `${formatted_product.product_size} - ${formatted_product.unit_size} - ${formatted_product.order_unit_name}`;
+    if (formatted_product.is_cart_item){
+        formatted_product['cart_uid'] = cart_item.prg_uomprocurementorderid,
+        formatted_product['num_in_cart'] = cart_item.prg_stockordered;
+        formatted_product['total_price'] = cart_item.prg_stockordered * formatted_product['price'];
+    }
+    return formatted_product;
 }
 
 
@@ -375,190 +412,24 @@ function process_product_out_of_quantity(valid, product_card){
 }
 
 
-function render_filter_options(dropdown_container, filter_opts, sort_by_label=false){
-    if (sort_by_label) filter_opts = filter_opts.sort((a, b) => a.label.localeCompare(b.label));
-    filter_opts.forEach(filter_opt => {
-        dropdown_container.append(`
-        <div class='dropdown-item'>
-            <input class='form-check-input filter-opt-radio' type='checkbox' name='${dropdown_container.attr('name')}-checkbox'
-                    data-label='${filter_opt.label}' data-value='${filter_opt.value}' data-parentul='${dropdown_container.attr('name')}'>
-            <label class='form-check-label'>${filter_opt.label}</label>
-        </div>
-        `);
-    });
-}
-
-function render_body_content(category_uid){
-    $.ajax({
-        type: 'POST',
-        url: 'https://prod-03.australiasoutheast.logic.azure.com:443/workflows/45b5ec12c81140e9a7493303673bf353/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=O5ib9W_qlwRWCbujaQdHYlCphAA7sZq3K-TZt8hKvqA',
-        contentType: 'application/json',
-        accept: 'application/json;odata=verbose',
-        timeout: AJAX_TIMEOUT_DURATION,
-        data: JSON.stringify({'category_uid': category_uid}),
-        complete: function(response, status, xhr){
-            if (String(status) !== 'success'){
-                alert('Unable to load data at this time');
-                return hide_elems_on_load(true);
-            }
-
-            $('.content-section.header-section').find('.image-container').append(`<img src="${covert_product_b64_img_to_url(response['responseJSON']['category_info']['crcfc_img_content_mime_type'], response['responseJSON']['category_info']['crcfc_img_content'])}" border="0">`);
-            $('#headerNameTxt').text(response['responseJSON']['category_info']['prg_name']);
-            
-            const products = response['responseJSON']['products'];
-            $.ajax({
-                type: 'POST',
-                url: 'https://prod-15.australiasoutheast.logic.azure.com:443/workflows/3e23899232174009b8be511c7a43412d/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=G4Ydf5oYEVZlgQTb4JjS1UFpdaVccR8zXWrIGRtE2cs',
-                contentType: 'application/json',
-                accept: 'application/json;odata=verbose',
-                timeout: AJAX_TIMEOUT_DURATION,
-                data: JSON.stringify({"customer_uid": CUSTOMER_UID, 'query_num_items_only': true}),
-                complete: function(response, status, xhr){
-                    if (String(status) !== 'success'){
-                        alert('Unable to load data at this time');
-                        return hide_elems_on_load(true);
-                    }
-                    const num_ordered = response['responseJSON']['num_items_orderd'];
-                    CART_BUTTON.attr('data-quantity', num_ordered);
-                    CART_BUTTON.find('[name=cart-item-num]').eq(0).text(num_ordered);
-
-                    $('div[name=spinner-resource-loader-container]').hide();
-                    $('div[name=progress-resource-loader-container]').show();
-                    let product_vendor_maps = [];
-                    let idx = 0;
-
-                    function retrieve_product_vendor_map(product_uid){
-                        function _finalise_request(){
-                            render_loading_progress_bar(100 * idx / (products.length - 1 <= 0 ? 1 : products.length - 1));
-                            if (idx < products.length - 1) return idx++;
-                            const formatted_products = process_product_vendor_map(products, product_vendor_maps);
-
-                            let brand_filter_options = [];
-                            let subcategory_filter_options = [];
-                            let vendor_filter_options = [];
-
-                            formatted_products.forEach(formatted_product => {
-                                if (brand_filter_options.length < 0 || !brand_filter_options.map(item => item.value).includes(formatted_product.brand_code)) brand_filter_options.push({'value': formatted_product.brand_code, 'label': formatted_product.brand_name});
-                                if (subcategory_filter_options.length < 0 || !subcategory_filter_options.map(item => item.value).includes(formatted_product.subcategory_uid)) subcategory_filter_options.push({'value': formatted_product.subcategory_uid, 'label': formatted_product.subcategory_name});
-                                if (vendor_filter_options.length < 0 || !vendor_filter_options.map(item => item.value).includes(formatted_product.vendor_uid)) vendor_filter_options.push({'value': formatted_product.vendor_uid, 'label': formatted_product.vendor_name});
-                            });
-
-                            render_filter_options(BRAND_FILTER_DROPDOWN, brand_filter_options);
-                            render_filter_options(SUBCATEGORY_FILTER_DROPDOWN, subcategory_filter_options);
-                            render_filter_options(VENDOR_FILTER_DROPDOWN, vendor_filter_options);
-
-                            render_product_cards(formatted_products, PRODUCT_CONTAINER_SECTION, false);
-                            hide_elems_on_load(true);
-                            $('#sort-by-name-asc').prop('checked', true);
-                        }
-                        $.ajax({
-                            type: 'POST',
-                            url: 'https://prod-25.australiasoutheast.logic.azure.com:443/workflows/6405ea920a2a4c40b9165f256a12924a/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=X17KcJPoRywTI5eKRhHrmqEyfV4tybM9BHFou-rdk9Q',
-                            contentType: 'application/json',
-                            accept: 'application/json;odata=verbose',
-                            timeout: AJAX_TIMEOUT_DURATION,
-                            data: JSON.stringify({'product_uid': product_uid}),
-                            complete: function(response, status, xhr){
-                                _finalise_request();
-                            },
-                            success: function(response, status, xhr){
-                                response.product_vendor_maps.forEach(product_vendor_map => {
-                                    product_vendor_maps.push(product_vendor_map);
-                                });
-                            }
-                        });
-                    }
-        
-                    products.forEach(product => {
-                        (function(y) {
-                            setTimeout(function() {
-                                retrieve_product_vendor_map(product['prg_uomprocurementserviceproductsid']);
-                                }, y * 250);
-                            }(idx));
-                    });
-                }
-            });
-        }
-    });
-}
-
-
-function get_selected_filter_values(checkbox_name, to_int=false){
-    let selected_values = [];
-    let all_values = [];
-    $(`input[name=${checkbox_name}]`).each(function(){
-        let _value_here = $(this).attr('data-value');
-        if (to_int) _value_here = parseInt(_value_here);
-        all_values.push(_value_here);
-        if($(this).is(':checked') || $(this).prop('checked')) selected_values.push(_value_here);
-    });
-    // if no filter option is selected, default to selecting all options
-    if (selected_values.length < 1) return all_values;
-    return selected_values;
-}
-
-function sort_product(sort_radio_dom){
-    const _this_id = sort_radio_dom.attr('id');
-    const _data_row = $(`div[name=product-card-container]`);
-    if (_this_id == 'sort-by-name-asc'){
-        _data_row.sort(function(a, b){
-            return $(a).attr('data-name').localeCompare($(b).attr('data-name'))
-        }).appendTo('section[name=product-container-section]');
-    }else if (_this_id == 'sort-by-name-desc'){
-        _data_row.sort(function(a, b){
-            return $(b).attr('data-name').localeCompare($(a).attr('data-name'))
-        }).appendTo('section[name=product-container-section]');
-    }else if(_this_id == 'sort-by-price-asc'){
-        _data_row.sort(function(a, b){
-            return parseFloat($(a).attr('data-vendorprice')) - parseFloat($(b).attr('data-vendorprice'));
-        }).appendTo('section[name=product-container-section]');
-    }else if(_this_id == 'sort-by-price-desc'){
-        _data_row.sort(function(a, b){
-            return $(b).attr('data-vendorprice') - parseFloat($(a).attr('data-vendorprice'));
-        }).appendTo('section[name=product-container-section]');
-    }else if(_this_id == 'sort-by-createdon-desc'){
-        _data_row.sort(function(a, b){
-            return new Date($(b).attr('data-createdon')) - new Date($(a).attr('data-createdon'));
-        }).appendTo('section[name=product-container-section]');
-    }else if(_this_id == 'sort-by-createdon-asc'){
-        _data_row.sort(function(a, b){
-            return new Date($(a).attr('data-createdon')) - new Date($(b).attr('data-createdon'));
-        }).appendTo('section[name=product-container-section]');
-    }
-}
-
-
 $(document).ready(function(){
-    const url_params = new URLSearchParams(window.location.search);
-    const category_uid = 'a5b4487f-7919-ee11-8f6d-002248933ec4';//url_params.get('category-uid');
-    $('#backHomeNav').on('click', function(event){return window.location = window.location.origin;});
-
+    // Render Cart Button drag to move function
     _drag_element(document.getElementById('cart-btn-container'));
+    // Hide all main body content section and show progress loader elements
     hide_elems_on_load();
-    render_body_content(category_uid);
+    render_body_content();
 
     // Modal functions
     $(document).on('click', '.close-modal-btn', function(event){
-        $(this).closest('.modal').modal('hide');
+        if ($(this).closest('.modal').attr('name') === PRODUCT_CONTAINER_MODAL.attr('name')) return $('.modal').modal('hide');
+        $(this).closest('.modal').modal('hide');    // Close the parent container whose class is modal
     });
 
-    $(document).on('click', 'span[name=product-info-btn]', function(){
-        const parent_card = $(this).closest('.product-card');
-        $('div[name=product-info-modal]').find('.modal-title').text(parent_card.attr('data-name'));
-        $('div[name=product-info-modal]').find('.modal-body').empty();
-
-        $('div[name=product-info-modal]').find('.modal-body').append(`
-            ${get_product_info_markup('Vendor Code', parent_card.attr('data-vendormapocode'))}
-            ${is_whitespace(parent_card.attr('data-barcode')) ? '' : get_product_info_markup('Barcode', parent_card.attr('data-barcode'))}
-            ${is_whitespace(parent_card.attr('data-brand')) ? '' : get_product_info_markup('Brand', parent_card.attr('data-brand'))}
-            ${is_whitespace(parent_card.find('.product-remark-container').text()) ? '' : get_product_info_markup('Remark', parent_card.find('.product-remark-container').text())}
-            ${get_product_info_markup('Order by', `${parent_card.attr('data-unitsize')} ${parent_card.attr('data-orderunitname')}`)}
-            ${is_whitespace(parent_card.attr('data-productsize')) ? '' : get_product_info_markup('Product Size', parent_card.attr('data-productsize'))}
-            ${get_product_info_markup('Category', parent_card.attr('data-categoryname'))}
-            ${get_product_info_markup('Sub-Category', parent_card.attr('data-subcategoryname'))}
-            ${get_product_info_markup('Provided from', parent_card.attr('data-vendorname'))}
-        `);
-        $('div[name=product-info-modal]').modal('show');
+    $(document).on('click', 'div[name=category-card-container]', function(){
+        const category_uid = $(this).attr('data-uid');
+        console.log(category_uid);
+        get_category_relative_path(category_uid);
+        //return window.location = get_category_relative_path($(this).attr('data-uid'));
     });
 
 
@@ -606,10 +477,7 @@ $(document).ready(function(){
         input_field.attr('disabled', true);
         let quantity = !input_field.val() || is_whitespace(input_field.val()) ? min_val : parseInt(input_field.val());
 
-        if (quantity < min_val 
-        //|| quantity > max_val
-        )
-        {
+        if (quantity < min_val){
             disable_button(cart_btn, false, 'Add to Cart');
             return alert('Unable to add to cart at this time');
         }
@@ -632,7 +500,7 @@ $(document).ready(function(){
                 disable_button(cart_btn, false, 'Add to Cart');
 
                 if (String(status) !== 'success') return alert('Unable to add to cart at this time');
-
+                
                 const all_ordered_quantity = response['responseJSON']['total_ordered'];
                 const vendor_stock_on_hand = response['responseJSON']['stock_on_hand'];
                 const product_min_quantity = parseInt(parent_card.attr('data-minquantity'));
@@ -660,20 +528,99 @@ $(document).ready(function(){
         });
     });
 
+    
+
+    $(document).on('click', 'span[name=product-info-btn]', function(){
+        const parent_card = $(this).closest('.product-card');
+        $('div[name=product-info-modal]').find('.modal-title').text(parent_card.attr('data-name'));
+        $('div[name=product-info-modal]').find('.modal-body').empty();
+
+        $('div[name=product-info-modal]').find('.modal-body').append(`
+            ${get_product_info_markup('Vendor Code', parent_card.attr('data-vendormapocode'))}
+            ${is_whitespace(parent_card.attr('data-barcode')) ? '' : get_product_info_markup('Barcode', parent_card.attr('data-barcode'))}
+            ${is_whitespace(parent_card.attr('data-brand')) ? '' : get_product_info_markup('Brand', parent_card.attr('data-brand'))}
+            ${is_whitespace(parent_card.find('.product-remark-container').text()) ? '' : get_product_info_markup('Remark', parent_card.find('.product-remark-container').text())}
+            ${get_product_info_markup('Order by', `${parent_card.attr('data-unitsize')} ${parent_card.attr('data-orderunitname')}`)}
+            ${is_whitespace(parent_card.attr('data-productsize')) ? '' : get_product_info_markup('Product Size', parent_card.attr('data-productsize'))}
+            ${get_product_info_markup('Category', parent_card.attr('data-categoryname'))}
+            ${get_product_info_markup('Sub-Category', parent_card.attr('data-subcategoryname'))}
+            ${get_product_info_markup('Provided from', parent_card.attr('data-vendorname'))}
+        `);
+        $('div[name=product-info-modal]').modal('show');
+    });
+
+    PRODUCT_SEARCH_TEXT_FIELD.on('keyup change', function(){
+        // Disable the "Apply Search" button if the text field is empty or only contains blank space
+        const _has_input = !is_whitespace($(this).val());
+        disable_button(APPLY_SEARCH_BTN, !_has_input);
+        if (!_has_input) return;
+    });
+
+    function write_cart_modal_header(header_dom, cart_items){
+        let cart_price = 0;
+        cart_items.forEach(cart_item => {cart_price += cart_item.total_price});
+        header_dom.text(`${cart_items.length} product${cart_items.length > 1 ? 's' : ''} in your cart for a total of $${cart_price.toFixed(2)}`);
+    }
+
+    APPLY_SEARCH_BTN.on('click', function(){
+        function _empty_result_handling(){
+            disable_button(APPLY_SEARCH_BTN, false, 'Apply Search');
+            alert('No product with such name exists');
+        }
+        // Ready progress loader to wait for AJAX function
+        disable_button(APPLY_SEARCH_BTN, true, BSTR_BORDER_SPINNER);
+
+        // Query from UOM Procurement Service Products for rows with prg_name_trimmed value containing search text
+        // field value (cleaned white space and lower-cased)
+        $.ajax({
+            type: 'POST',
+            url: 'https://prod-24.australiasoutheast.logic.azure.com:443/workflows/e51d6b909daa4f9c897f29f51b296623/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=BDKkNtQDX9q2pznGdElCfonzFQvEA7dsKzxtrL9n9Wo',
+            contentType: 'application/json',
+            accept: 'application/json;odata=verbose',
+            timeout: AJAX_TIMEOUT_DURATION,
+            data: JSON.stringify({'searched_txt': clean_white_space(PRODUCT_SEARCH_TEXT_FIELD.val().toLowerCase().trim())}),
+            complete: function(response, status, xhr){
+                if (String(status) !== 'success'){
+                    disable_button(APPLY_SEARCH_BTN, false, 'Apply Search');
+                     return alert('Unable to search for products at this time');
+                }
+                const products = response['responseJSON'];
+                let formatted_products = [];
+                products.forEach(product_json => {
+                    formatted_products.push(format_product_vendor_map(format_obj_prg_key({...product_json}), extract_sub_object(product_json, 'product_vendor_map.')));
+                });
+
+                if (formatted_products.length < 1) return _empty_result_handling();
+                // Ready popup Modal (containing products that match searched value)
+                PRODUCT_CONTAINER_MODAL.find('.modal-body').empty();
+                PRODUCT_CONTAINER_MODAL.find('.modal-title').text(`Found ${formatted_products.length} product${formatted_products.length > 1 ? 's' : ''}`);
+                render_product_cards(formatted_products, PRODUCT_CONTAINER_MODAL.find('.modal-body'), true);
+                PRODUCT_CONTAINER_MODAL.modal('show');
+                disable_button(APPLY_SEARCH_BTN, false, 'Apply Search');
+            }
+        });
+    });
+
+
     // View Cart function
     CART_BUTTON.on('click', function(event){
+        // Ready Cart item container modal body for rendering
         CART_CONTAINER_MODAL.find('.modal-footer').toggle(false);
         const cart_body_loader = `<div style='display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; width: 100%; margin-top: 1.25em;'>
                                         <br>${BSTR_BORDER_SPINNER}<br>
                                         <h5>Loading your cart...</h6>
-                                    </div>`
+                                    </div>`;                            
         const modal_content_body = CART_CONTAINER_MODAL.find('.modal-content').eq(0);
         CART_CONTAINER_MODAL.find('.modal-title').text('');
         modal_content_body.find('.modal-body').empty();
-        if (IS_MAKING_ORDER) return;
+        // Prevent Modal from displaying when there exists another POST Request to add product to cart
+        if (IS_MAKING_ORDER) return;       
+        // Render Loading spinner while waiting for POST Request Completion
         modal_content_body.find('.modal-body').append(cart_body_loader);
         CART_CONTAINER_MODAL.modal('show');
 
+        // Retrieve User In Cart Items from UOM Procurement Order Dataverse Table
+        // Query all ACTIVE Cart Items that are not yet checked out
         $.ajax({
             type: 'POST',
             url: 'https://prod-15.australiasoutheast.logic.azure.com:443/workflows/3e23899232174009b8be511c7a43412d/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=G4Ydf5oYEVZlgQTb4JjS1UFpdaVccR8zXWrIGRtE2cs',
@@ -689,6 +636,7 @@ $(document).ready(function(){
                     return hide_elems_on_load(true);
                 }
                 
+                // Handle empty User Cart
                 if (response['responseJSON']['num_items_orderd'] < 1) {
                     CART_CONTAINER_MODAL.find('.modal-title').text("You haven't yet added any product to cart");
                     CART_CONTAINER_MODAL.find('.modal-footer').toggle(false);
@@ -696,47 +644,18 @@ $(document).ready(function(){
                 }
                 const cart_items = response['responseJSON']['cart_items'];
 
-                let product_vendor_maps = [];
-                let products = [];
-                let idx = 0;
+                modal_content_body.find('.modal-body').empty();
+                modal_content_body.find('.modal-body').append(`<div class="cart-item-container-section"></div>`);
 
-                function retrieve_cart_item_product_info(cart_item){
-                    function _finalise_request(){
-                        if (idx < cart_items.length - 1) return idx++;
-                        modal_content_body.find('.modal-body').empty();
-                        modal_content_body.find('.modal-body').append(`<div class="cart-item-container-section"></div>`);
-                        const formatted_products = process_product_vendor_map(products, product_vendor_maps, cart_items);
-                        
-                        render_product_cards(formatted_products, modal_content_body.find('.cart-item-container-section'), false);
-                        write_cart_modal_header(CART_CONTAINER_MODAL.find('.modal-title'), formatted_products);
-                        CART_CONTAINER_MODAL.find('.modal-footer').toggle(formatted_products.length > 0);
-
-                        CART_BUTTON.attr('data-quantity', formatted_products.length);
-                        CART_BUTTON.find('[name=cart-item-num]').eq(0).text(formatted_products.length);
-                    }
-                    $.ajax({
-                        type: 'POST',
-                        url: 'https://prod-03.australiasoutheast.logic.azure.com:443/workflows/d5232e14c5a248cfbfa4ec06581c548b/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=EXC8jJ8M0MrqyOoYImvQOMRRiJtzRFrd7JBIgWZZ-dE',
-                        contentType: 'application/json',
-                        accept: 'application/json;odata=verbose',
-                        timeout: AJAX_TIMEOUT_DURATION,
-                        data: JSON.stringify({'map_uid': cart_item['_prg_vendorcode_value'], 'product_uid': cart_item['_prg_product_value']}),
-                        complete: function(response, status, xhr){
-                            if (String(status) !== 'success') return _finalise_request();
-                            product_vendor_maps.push(response['responseJSON']['product_vendor_map']);
-                            products.push(response['responseJSON']['product']);
-                            _finalise_request();
-                        }
-                    });
-                }
-
+                let formatted_products = [];
                 cart_items.forEach(cart_item => {
-                    (function(y) {
-                        setTimeout(function() {
-                            retrieve_cart_item_product_info(cart_item);
-                            }, y * 280);
-                        }(idx));
-                })
+                    formatted_products.push(format_product_vendor_map(format_obj_prg_key(extract_sub_object({...cart_item}, 'product.')), extract_sub_object({...cart_item}, 'product_vendor_map.'), cart_item));
+                });
+                render_product_cards(formatted_products, modal_content_body.find('.cart-item-container-section'), false);
+                write_cart_modal_header(CART_CONTAINER_MODAL.find('.modal-title'), formatted_products);
+                CART_CONTAINER_MODAL.find('.modal-footer').toggle(formatted_products.length > 0);
+                CART_BUTTON.attr('data-quantity', formatted_products.length);
+                CART_BUTTON.find('[name=cart-item-num]').eq(0).text(formatted_products.length);
             }
         });
     });
@@ -874,56 +793,5 @@ $(document).ready(function(){
                 handle_cart_change_btn_event(calling_btn, false);
             }
         });
-    });
-
-
-    //Filter function
-    $(document).on('keyup change', `${product_filter_checkbox_func_names}, input[name=sort-option-radio-checkbox], input[name=product-search-input-field]`, function(event){
-        let no_filter = true;
-        FILTER_DROPDOWNS.forEach(dropdown => {
-            no_filter = no_filter && $(`input[name=${dropdown.attr('name')}-checkbox]:checked`).length < 1;
-        });
-        disable_button(APPLY_FILTER_BTN, !$('input[name=product-search-input-field]').val() && $('input[name=sort-option-radio-checkbox]:checked').length < 1 && no_filter);
-        disable_button(CLEAR_FILTER_BTN, APPLY_FILTER_BTN.prop('disabled'));
-    });
-
-    APPLY_FILTER_BTN.on('click', function(event){
-        disable_button(CLEAR_FILTER_BTN, true);
-        disable_button(APPLY_FILTER_BTN, true, BSTR_BORDER_SPINNER);
-
-        const filtered_vendors = get_selected_filter_values(`${VENDOR_FILTER_DROPDOWN.attr('name')}-checkbox`);
-        const filtered_subcategories = get_selected_filter_values(`${SUBCATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
-        const filtered_brands = get_selected_filter_values(`${BRAND_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
-        const searched_txt = !$('input[name=product-search-input-field]').val() || is_whitespace($('input[name=product-search-input-field]').val()) ? '' : clean_white_space($('input[name=product-search-input-field]').val().toLowerCase().trim());
-
-        $(document).find('.product-card').each(function(){
-            $(this).toggle($(this).attr('data-nametrimmed').includes(searched_txt) &&
-                            filtered_vendors.includes($(this).attr('data-vendoruid')) &&
-                            filtered_subcategories.includes($(this).attr('data-subcategoryuid')) &&
-                            filtered_brands.includes(parseInt($(this).attr('data-brandcode')))
-                        );
-        });
-        sort_product($('input[name=sort-option-radio-checkbox]:checked'));
-
-        disable_button(CLEAR_FILTER_BTN, false);
-        disable_button(APPLY_FILTER_BTN, true, 'Apply Filters');
-    });
-
-
-    CLEAR_FILTER_BTN.on('click', function(event){
-        disable_button(CLEAR_FILTER_BTN, true, BSTR_BORDER_SPINNER);
-        disable_button(APPLY_FILTER_BTN, true);
-
-        $(document).find('.product-card').each(function(){
-            $(this).toggle(true);
-        });
-        sort_product($('#sort-by-name-asc'));
-
-        $('input[name=product-search-input-field]').val(null);
-        $(document).find('.form-check-input').prop('checked', false);
-        $(document).find('.form-check-input').attr('checked', false);
-        $('#sort-by-name-asc').prop('checked', true);
-
-        disable_button(CLEAR_FILTER_BTN, true, 'Clear Filters');
     });
 });
