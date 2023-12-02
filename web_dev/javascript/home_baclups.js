@@ -283,6 +283,7 @@ function render_product_cards(products, parent_container, show_category=false){
                         </h6>
                     </div>
                     <p>
+                        <h6>From ${product.vendor_name}</h6>
                         $${product.price.toFixed(2)}
                         ${product.is_cart_item ? '<!--' : '<br>'}${_get_text_padding(longest_order_size_desc_txt, product.order_size_desc_txt)}${product.is_cart_item ? '-->' : ''}
                     </p>
@@ -580,11 +581,11 @@ $(document).ready(function(){
             timeout: AJAX_TIMEOUT_DURATION,
             data: JSON.stringify({'searched_txt': clean_white_space(PRODUCT_SEARCH_TEXT_FIELD.val().toLowerCase().trim())}),
             complete: function(response, status, xhr){
-                if (String(status) !== 'success'){
-                    disable_button(APPLY_SEARCH_BTN, false, 'Apply Search');
-                     return alert('Unable to search for products at this time');
-                }
-                const products = response['responseJSON'];
+                disable_button(APPLY_SEARCH_BTN, false, 'Apply Search');
+            },
+            success: function(response, status, xhr){
+                console.log(response);
+                const products = response;
                 let formatted_products = [];
                 products.forEach(product_json => {
                     formatted_products.push(format_product_vendor_map(format_obj_prg_key({...product_json}), extract_sub_object(product_json, 'product_vendor_map.')));
@@ -597,6 +598,9 @@ $(document).ready(function(){
                 render_product_cards(formatted_products, PRODUCT_CONTAINER_MODAL.find('.modal-body'), true);
                 PRODUCT_CONTAINER_MODAL.modal('show');
                 disable_button(APPLY_SEARCH_BTN, false, 'Apply Search');
+            },
+            error: function(response, status, xhr){
+                return alert('Unable to search for products at this time');
             }
         });
     });

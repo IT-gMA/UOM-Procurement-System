@@ -1,9 +1,16 @@
 const CUSTOMER_UID = 'e391c7cb-e9c7-ed11-b597-00224897d329';
 const AJAX_TIMEOUT_DURATION = 864000000;
+const MAX_FILE_SIZE = 131072000; // in KB
 const PLACE_HOLDER_IMG_URL = 'https://i.ibb.co/VMPPhzc/place-holder-catering-item-img.webp';
 
 const APPLY_FILTER_BTN = $('button[name=apply-search-filter-btn]');
 const CLEAR_FILTER_BTN = $('button[name=clear-search-filter-btn]');
+const UPLOAD_FILE_BTN = $('button[name=upload-product-img]');
+const DOWNLOAD_FILE_BTN = $('button[name=down-load-file]');
+const OPEN_INVOICE_UPLOAD_BTN = $('span[name=attach-invoice-file-btn]');
+const UPLOAD_INVOICE_FIELD = $('input[name=upload-img-input]');
+let FILE_DOWNLOAD_LINK = undefined;
+
 const PRODUCT_SEARCH_TEXT_FIELD = $('input[name=product-search-input-field]');
 const APPLY_ORDER_INFO_CHANGES_BTN = $('button[name=apply-order-info-changes-btn]');
 
@@ -69,6 +76,7 @@ const CANCEL_ORDER_BTN = $('button[name=cancel-order-btn]');
 const RETURN_ORDER_BTN = $('button[name=request-return-order-btn]');
 const ST_WRONG_ORDER_BTN = $('button[name=st-wrong-order-btn]');
 const ORDER_TICKET_FORM_MODAL = $('div[name=issue-order-ticket-modal]');
+const UPLOAD_INVOICE_MODAL = $('div[name=product-img-modal]');
 const ORDER_TICKET_TITLE_INPUT = $('input[name=order-issue-ticket-title-input]');
 const ORDER_TICKET_DESC_INPUT = $('input[name=order-issue-ticket-desc-input]');
 const DISABLED_ELEM_CLASS = 'disabled-element';
@@ -369,7 +377,6 @@ function render_loading_progress_bar(curr_progress=0){
 
     PROGRESS_BAR_DOM.attr('aria-valuenow', curr_progress);
     PROGRESS_BAR_DOM.css('width', `${curr_progress}%`);
-    //$('.progress-indicator').find('h6').text(`${curr_progress.toFixed(2)}%`);
 }
 
 function extract_all_data_uid_attributes(target_element, to_formatted_str=false) {
@@ -409,8 +416,84 @@ function format_obj_prg_key(og_obj) {
     }
     return new_obj;
 }
-/*End of Util functions*/
 
+function get_base64_contents(b64_str){
+    // return a list where:
+    // [0]: mimetype
+    // [1]: the base64 content string
+    const b64_content_sections = b64_str.split(',');
+    return [b64_content_sections[0].match(/[^:\s*]\w+\/[\w-+\d.]+(?=[;| ])/)[0], b64_content_sections[1]];
+}
+
+
+const convert_to_base64 = file => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = error => reject(error);
+});
+
+function is_b64_str_longer_than_allowed(file, callback) {
+    // Read the file content and convert it to a base64 string
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        callback(Math.abs(event.target.result.split(',')[1].length) > MAX_FILE_SIZE);
+    };
+    reader.readAsDataURL(file);
+}
+
+function _await_file_upload(complete=false){
+    UPLOAD_FILE_BTN.attr('data-sendingrequest', !complete ? 1 : 0);
+    disable_button(UPLOAD_FILE_BTN, true, complete ? 'Upload File' : BSTR_BORDER_SPINNER);
+    disable_filter_elements(!complete, $(`button[name=${DOWNLOAD_FILE_BTN.attr('name')}], input[name=${UPLOAD_INVOICE_FIELD.attr('name')}]`));
+}
+
+function _wait_for_file_retrieval(parent_th, complete=false){
+    if (parent_th === undefined) return;
+    parent_th.empty();
+    parent_th.append(complete ? `<span class="material-symbols-rounded" name='${OPEN_INVOICE_UPLOAD_BTN.attr('name')}'>attach_file</span>` : BSTR_BORDER_SPINNER);
+}
+
+function ajax_retrieve_invoice(parent_th=undefined){
+    disable_button(UPLOAD_FILE_BTN, true);
+    UPLOAD_INVOICE_FIELD.val(null);
+    $.ajax({
+        type: 'POST',
+        url: 'https://prod-27.australiasoutheast.logic.azure.com:443/workflows/117156843d2c4cadb754023277685f19/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=wlDtQGXovxjZ359K4XCRHo0HqIqrluBmXHR9hokFn20',
+        contentType: 'application/json',
+        accept: 'application/json;odata=verbose',
+        timeout: AJAX_TIMEOUT_DURATION,
+        data: JSON.stringify({
+            'vendor_uid': targeted_uom_order.vendor_uid, 'request_uid': targeted_uom_order.request_uid,
+        }),
+        complete: function(response, status, xhr){
+            if (parent_th !== undefined) {
+                _wait_for_file_retrieval(parent_th, true);
+            }else{
+                _await_file_upload(true);
+            }
+        },
+        success: function(response, status, xhr){
+            UPLOAD_INVOICE_MODAL.modal('show');
+            disable_button(DOWNLOAD_FILE_BTN, !response.has_file);
+            DOWNLOAD_FILE_BTN.toggle(response.has_file);
+            if (response.has_file){
+                FILE_DOWNLOAD_LINK = document.createElement('a');
+                FILE_DOWNLOAD_LINK.href = URL.createObjectURL(data_url_to_blob(`data:${response.record.crcfc_mimetype};base64,${response.base64_file}`));
+                FILE_DOWNLOAD_LINK.download = response.record.crcfc_filename;
+                $(`h6[name=upload-img-name-txt-container]`).text(response.record.crcfc_filename);
+            }else{
+                FILE_DOWNLOAD_LINK = undefined;
+            }
+            if (parent_th === undefined) alert('Successfully uploaded file');
+        },
+        error: function(response, status, xhr){
+            alert('Error fetching file');
+            if (parent_th !== undefined) UPLOAD_INVOICE_MODAL.modal('hide');
+        },
+    });
+}
+/*End of Util functions*/
 
 function render_filter_options(dropdown_container, filter_opts, sort_by_label=false){
     if (sort_by_label) filter_opts = filter_opts.sort((a, b) => a.label.localeCompare(b.label));
@@ -424,7 +507,6 @@ function render_filter_options(dropdown_container, filter_opts, sort_by_label=fa
         `);
     });
 }
-
 
 function set_up_date_range_picker(date_input, min_date, max_date){
     date_input.attr('min', min_date);
@@ -535,6 +617,9 @@ function render_order_history_data_row(sort_latest=true, data_list=undefined){
                             ` : ''}
                             ${get_sum_num_arr([sub1_order_idx, sub2_order_idx, sub3_order_idx]) === 0 ? `
                             <th scope="row" rowspan="${1}" class='span-grouped-row' data-collapseidx='1' data-collapsebtncontainer='1'>
+                                <span class="material-symbols-rounded" name='${OPEN_INVOICE_UPLOAD_BTN.attr('name')}'>attach_file</span>
+                            </th>
+                            <th scope="row" rowspan="${1}" class='span-grouped-row' data-collapseidx='1' data-collapsebtncontainer='1'>
                                 ${is_purchase_request_editable(order_grouped_by_vendor.grouped_objects) ? 
                                     make_request_status_checkbox('select-uom-request-data-checkbox-on-vendor', [{data_name: 'data-requestuid', data_val: order_grouped_by_request.grouped_objects[0]['request_uid']}, {data_name: 'data-vendoruid', data_val: formatted_uom_order.vendor_uid}]) :
                                     `<span class="material-symbols-rounded">pending</span>`}
@@ -604,13 +689,13 @@ function render_body_content(){
         complete: function(response, status, xhr){
             if (String(status) !== 'success'){
                 alert('Unable to load data at this time');
+                return window.location = `${window.location.origin}/No-Data/`;
                 return hide_elems_on_load(true);
             }
             const uom_requests = response['responseJSON'];
             const num_orders = get_sum_num_arr(response['responseJSON'].map(uom_request => uom_request.crcfc_num_orders));
 
-            if (uom_requests.length < 1 || num_orders < 1){
-            }
+            if (uom_requests.length < 1 || num_orders < 1) return window.location = `${window.location.origin}/No-Data/`;
 
             $('div[name=spinner-resource-loader-container]').hide();
             $('div[name=progress-resource-loader-container]').show();
@@ -634,7 +719,6 @@ function render_body_content(){
                     formatted_uom_order['product_remark']= product.prg_remarks ?? '';
                     formatted_uom_order['bulk_order_unit_code'] = is_json_data_empty(product.prg_bulkorder) ? 0 : product.prg_bulkorder;
                     formatted_uom_order['bulk_order_unit_name'] = is_json_data_empty(product.prg_bulkorder) ? 'N/A' : product['prg_bulkorder@OData.Community.Display.V1.FormattedValue'];
-
                     // Only append valid order with a formatted est price
                     if (formatted_uom_order.est_price > 0) FORMATTED_UOM_ORDERS.push(formatted_uom_order);
                 }
@@ -643,9 +727,9 @@ function render_body_content(){
                     let is_loop = idx < num_orders - 1;
                     render_loading_progress_bar(is_loop ? (100 * idx) / num_orders : 99.9);
                     if (is_loop) return incr ? idx++ : idx;
-                    
+                    if (FORMATTED_UOM_ORDERS.length < 1) return window.location = `${window.location.origin}/No-Data/`;
+
                     sleep(10000);
-                    //console.log(FORMATTED_UOM_ORDERS);
                     ORDER_STATUS_FILTER_OPTS.filter(data => data.selectable).forEach(data => {
                         $('div[name=mass-order-status-selection-opt-container]').append(`
                             <div class='filter-container opt-selection-btn' id='sort-container' style='background-color: ${data.colour}; color: ${data.text_color}'
@@ -654,7 +738,6 @@ function render_body_content(){
                             </div>
                         `);
                     });
-
                     FORMATTED_UOM_ORDERS.forEach(uom_order => {
                         if (brand_filter_options.length < 0 || !brand_filter_options.map(item => item.value).includes(uom_order.brand_code)) brand_filter_options.push({'value': uom_order.brand_code, 'label': uom_order.brand_name});
                         if (product_filter_options.length < 0 || !product_filter_options.map(item => item.value).includes(uom_order.product_uid)) product_filter_options.push({'value': uom_order.product_uid, 'label': uom_order.product_name});
@@ -692,6 +775,7 @@ function render_body_content(){
                         'vendor_map_uid': uom_order['_prg_vendorcode_value'],
                         'vendor_map_code': uom_order['_prg_vendorcode_value@OData.Community.Display.V1.FormattedValue'],
                         'request_uid': uom_request.crcfc_uomprocurementorderrequestid,
+                        'request_odataid': uom_order['@odata.id'],
                         'request_code': uom_request.crcfc_requestcode,
                         'createdon_str': format_dt(request_createdon_dt),
                         'createdon': request_createdon_dt,
@@ -753,7 +837,7 @@ function render_body_content(){
                     }(idx));
             });
             
-        }
+        },
     });
 }
 
@@ -768,7 +852,7 @@ function render_chart_js_content(no_filter=true){
     const filtered_products = get_selected_filter_values(`${PRODUCT_FILTER_DROPDOWN.attr('name')}-checkbox`);
     const filtered_categories = get_selected_filter_values(`${CATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
     const filtered_subcategories = get_selected_filter_values(`${SUBCATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
-    const filtered_brands = get_selected_filter_values(`${BRAND_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
+    const filtered_brands = get_selected_filter_values(`${BRAND_FILTER_DROPDOWN.attr('name')}-checkbox`);
     const filtered_payment_opts = get_selected_filter_values(`${PAYMENT_STATUS_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
     const filtered_order_opts = get_selected_filter_values(`${ORDER_STATUS_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
     let {min_date, max_date} = get_daterange_input_val(ORDER_DATE_FILTER_DROPDOWN);
@@ -780,7 +864,7 @@ function render_chart_js_content(no_filter=true){
         filtered_subcategories.includes(uom_order.subcategory_uid) && filtered_categories.includes(uom_order.category_uid) &&
         filtered_products.includes(uom_order.product_uid) &&
         filtered_vendors.includes(uom_order.vendor_uid) &&
-        filtered_brands.includes(uom_order.brand_code) &&
+        filtered_brands.includes(String(uom_order.brand_code)) &&
         filtered_payment_opts.includes(uom_order.payment_status_code) &&
         filtered_order_opts.includes(uom_order.order_status_code) &&
         is_within_datetime_range(uom_order.createdon, min_date, max_date)
@@ -1204,7 +1288,6 @@ function sort_order_history_items(sort_radio_dom, formatted_uom_orders, render_t
     }
 }
 
-
 // Order detail changes function
 function process_order_status_opt_selection_btn(parent_tr, correspond_order_status_obj){
     const order_status_selection_btn = parent_tr.find('div[name=single-order-status-selection-opt-btn]').eq(0);
@@ -1249,7 +1332,6 @@ $(document).ready(function(){
     hide_elems_on_load();
     render_body_content();
 
-
     //Filter function
     $(document).on('keyup change', `${product_filter_checkbox_func_names}, input[name=sort-option-radio-checkbox], input[name=product-search-input-field], .search-text-field.filter-search-text-field`, function(event){
         let no_filter = true;
@@ -1268,15 +1350,12 @@ $(document).ready(function(){
         const filtered_products = get_selected_filter_values(`${PRODUCT_FILTER_DROPDOWN.attr('name')}-checkbox`);
         const filtered_categories = get_selected_filter_values(`${CATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
         const filtered_subcategories = get_selected_filter_values(`${SUBCATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
-        const filtered_brands = get_selected_filter_values(`${BRAND_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
+        const filtered_brands = get_selected_filter_values(`${BRAND_FILTER_DROPDOWN.attr('name')}-checkbox`);
         const filtered_payment_opts = get_selected_filter_values(`${PAYMENT_STATUS_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
         const filtered_order_opts = get_selected_filter_values(`${ORDER_STATUS_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
 
         const searched_txt = !$('input[name=product-search-input-field]').val() || is_whitespace($('input[name=product-search-input-field]').val()) ? '' : clean_white_space($('input[name=product-search-input-field]').val().toLowerCase().trim());
         let {min_date, max_date} = get_daterange_input_val(ORDER_DATE_FILTER_DROPDOWN);
-        
-
-        
         sort_order_history_items($('input[name=sort-option-radio-checkbox]:checked'), 
                                     [...FORMATTED_UOM_ORDERS].filter(formatted_uom_order => 
                                         (formatted_uom_order.trimmed_product_name.includes(searched_txt) || formatted_uom_order.order_code_trimmed.includes(searched_txt)) &&
@@ -1284,7 +1363,7 @@ $(document).ready(function(){
                                         filtered_categories.includes(formatted_uom_order.category_uid) &&
                                         filtered_subcategories.includes(formatted_uom_order.subcategory_uid) &&
                                         filtered_products.includes(formatted_uom_order.product_uid) &&
-                                        filtered_brands.includes(formatted_uom_order.brand_code) &&
+                                        filtered_brands.includes(String(formatted_uom_order.brand_code)) &&
                                         filtered_payment_opts.includes(formatted_uom_order.payment_status_code) &&
                                         filtered_order_opts.includes(formatted_uom_order.order_status_code) &&
                                         is_within_datetime_range(formatted_uom_order.createdon, min_date, max_date)
@@ -1333,9 +1412,86 @@ $(document).ready(function(){
 
     // Modal functions
     $(document).on('click', '.close-modal-btn', function(event){
-        if ($('button[name=send-order-ticket-btn]').attr('data-sendingrequest') === '1') return;
+        if ($('button[name=send-order-ticket-btn]').attr('data-sendingrequest') === '1' || UPLOAD_FILE_BTN.attr('data-sendingrequest') === '1') return;
         $(this).closest('.modal').modal('hide');
     });
+
+
+    // Upload order attachment function
+    $(document).on('click', `span[name=${OPEN_INVOICE_UPLOAD_BTN.attr('name')}]`, function(event){
+        const parent_card = $(this).closest('tr');
+        const parent_th = $(this).closest('.span-grouped-row');
+        targeted_uom_order = FORMATTED_UOM_ORDERS.filter(uom_order => uom_order.order_uid === parent_card.attr('data-orderuid'))[0];
+        if (targeted_uom_order === undefined) return;
+        FILE_DOWNLOAD_LINK = undefined;
+        $(`h6[name=upload-img-name-txt-container]`).empty();
+        _wait_for_file_retrieval(parent_th);
+        UPLOAD_INVOICE_MODAL.find('.modal-title').text(`Upload vendor ${targeted_uom_order.vendor_name} invoice for Request ${targeted_uom_order.request_code}`);
+        ajax_retrieve_invoice(parent_th);
+    });
+
+    $(document).on('click', `button[name=${DOWNLOAD_FILE_BTN.attr('name')}]`, function(event){
+        if (FILE_DOWNLOAD_LINK === undefined || targeted_uom_order === undefined) return;
+        FILE_DOWNLOAD_LINK.click();
+    });
+
+    $(document).on('change', `input[name=${UPLOAD_INVOICE_FIELD.attr('name')}]`, function(event){
+        if (targeted_uom_order === undefined) return;
+        const files = document.getElementById($(this).attr('id')).files;
+        if (files.length < 1) return;
+        is_b64_str_longer_than_allowed(files[0], function(exceed){
+            disable_button(UPLOAD_FILE_BTN, exceed);
+            if (exceed) {
+                UPLOAD_INVOICE_FIELD.val(null);
+                $(`h6[name=upload-img-name-txt-container]`).empty();
+                return alert('File size larger than allowed');
+            }
+            $(`h6[name=upload-img-name-txt-container]`).text(files[0].name);
+        });
+    });
+
+    UPLOAD_FILE_BTN.on('click', async function(event){
+        if (targeted_uom_order === undefined || !UPLOAD_INVOICE_FIELD.val()) return disable_button($(this), true);
+        const uploaded_file = document.getElementById(UPLOAD_INVOICE_FIELD.attr('id')).files[0];
+        if (uploaded_file === undefined) return disable_button($(this), true);
+        _await_file_upload();
+        try{
+            const b64_content = get_base64_contents(await convert_to_base64(uploaded_file));
+            $.ajax({
+                type: 'POST',
+                url: 'https://prod-05.australiasoutheast.logic.azure.com:443/workflows/69e09af6a32c4b8ba2fd2fda8ddb5a85/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=RGqAfTWZ7L4d5LXvowFFfzzU9CPhilbrcqO2oiHjjWQ',
+                contentType: 'application/json',
+                accept: 'application/json;odata=verbose',
+                timeout: AJAX_TIMEOUT_DURATION,
+                data: JSON.stringify({
+                    'file_name': uploaded_file.name,
+                    'b64_encode': b64_content[1],
+                    'size': b64_content[1].length,
+                    'mime_type': b64_content[0],
+                    'vendor_odataid': '',
+                    'vendor_uid': targeted_uom_order.vendor_uid,
+                    'request_odataid': targeted_uom_order.request_odataid,
+                    'request_uid': targeted_uom_order.request_uid,
+                }),
+                complete: function(response, status, xhr){
+                    UPLOAD_INVOICE_FIELD.val(null);
+                },
+                success: function(response, status, xhr){
+                    ajax_retrieve_invoice();
+                },
+                error: function(response, status, xhr){
+                    alert('Error uploading file');
+                    _await_file_upload(true);
+                },
+            });
+            
+        }catch (error){
+            console.error(error);
+            alert('Error reading file');
+            _await_file_upload(true);
+        }
+    });
+    
 
     //Product Info Button function
     $(document).on('click', 'div[name=product-info-btn]', function(){
@@ -1431,28 +1587,29 @@ $(document).ready(function(){
         disable_button($('button[name=send-order-ticket-btn]'), !$(this).val() && is_whitespace($(this).val()));
     });
 
-    CANCEL_ORDER_BTN.on('click', function(event){
+    $(document).on('click', `button[name=${CANCEL_ORDER_BTN.attr('name')}]`, function(event){
         if (targeted_uom_order === undefined || $('button[name=send-order-ticket-btn]').attr('data-sendingrequest') === '1') return;
         render_ticket_form_modal(`Order ${targeted_uom_order.order_code} cancelation`, targeted_uom_order, 6, 2);
     });
 
-    RETURN_ORDER_BTN.on('click', function(event){
+    $(document).on('click', `button[name=${RETURN_ORDER_BTN.attr('name')}]`, function(event){
         if (targeted_uom_order === undefined || $('button[name=send-order-ticket-btn]').attr('data-sendingrequest') === '1') return;
         render_ticket_form_modal(`Order ${targeted_uom_order.order_code} return`, targeted_uom_order, 3, targeted_uom_order.payment_status_code);
     });
 
-    ST_WRONG_ORDER_BTN.on('click', function(event){
+    $(document).on('click', `button[name=${ST_WRONG_ORDER_BTN.attr('name')}]`, function(event){
         if (targeted_uom_order === undefined || $('button[name=send-order-ticket-btn]').attr('data-sendingrequest') === '1') return;
         render_ticket_form_modal(`Order ${targeted_uom_order.order_code} other issues`, targeted_uom_order, 8, targeted_uom_order.payment_status_code);
     });
 
-    ORDER_TICKET_FORM_MODAL.on('hide.bs.modal', function (e) {
-        if ($('button[name=send-order-ticket-btn]').attr('data-sendingrequest') === '1'){
+    $(`div[name=${ORDER_TICKET_FORM_MODAL.attr('name')}], div[name=${UPLOAD_INVOICE_MODAL.attr('name')}]`).on('hide.bs.modal', function (e) {
+        if ($('button[name=send-order-ticket-btn]').attr('data-sendingrequest') === '1' || UPLOAD_FILE_BTN.attr('data-sendingrequest') === '1'){
             // Prevent auto closing Modal if POST Request has not completed
             e.preventDefault();
             e.stopPropagation();
             return false;
         }
+        targeted_uom_order = undefined;
         return true;
     });
 
@@ -1560,7 +1717,7 @@ $(document).ready(function(){
 
     APPLY_ORDER_INFO_CHANGES_BTN.on('click', function(event){
         let progress = 0;
-        const disabled_elements = $('.form-check-input, .filter-opt-radio, div[name=mass-order-status-selection-opt-container], .product-quantity-input-field, .integer-input, .opt-selection-btn, .search-and-filter-section, div[name=product-info-btn], .image-container');
+        const disabled_elements = $(`.form-check-input, .filter-opt-radio, div[name=mass-order-status-selection-opt-container], .product-quantity-input-field, .integer-input, .opt-selection-btn, .search-and-filter-section, div[name=product-info-btn], .image-container, span[name=${OPEN_INVOICE_UPLOAD_BTN.attr('name')}]`);
         disable_filter_elements(true, disabled_elements);
         disable_button(APPLY_ORDER_INFO_CHANGES_BTN, true, BSTR_BORDER_SPINNER);
 
@@ -1612,7 +1769,6 @@ $(document).ready(function(){
             if (corresponding_grouped_uom_order_by_request === undefined) return;
             
         });
-        //console.log(updated_order_list);
         if (updated_order_list.length < 1) return _reset_body_state();
 
         function _ajax_update(updated_data){

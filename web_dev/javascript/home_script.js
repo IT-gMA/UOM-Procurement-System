@@ -267,7 +267,7 @@ function render_product_cards(products, parent_container, show_category=false){
                         </h6>
                     </div>
                     <p>
-                        <h6>From ${product.vendor_name}</h6>
+                    <h6>From ${product.vendor_name}</h6>
                         $${product.price.toFixed(2)}
                         ${product.is_cart_item ? '<!--' : '<br>'}${_get_text_padding(longest_order_size_desc_txt, product.order_size_desc_txt)}${product.is_cart_item ? '-->' : ''}
                     </p>

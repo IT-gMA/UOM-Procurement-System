@@ -49,6 +49,44 @@
         <!--End of Google Material Icon Stylings-->
         <br>
         <!--Modals-->
+        <div class='modal' id='ProductImgUploadModal' tabindex='-1' role='dialog' aria-labelledby='ProductImgUploadModalLabel' aria-hidden='true' name='product-img-modal' data-targetorder="">
+            <div class='modal-dialog'>
+                <div class='modal-content' style='min-width: 300px; width: 98vw;'>
+                    <div class='modal-header'>
+                        <h5 class='modal-title'></h5>
+                        <i class='fa-solid fa-xmark close-modal-btn' name='close-item-info-modal-button'></i>
+                    </div>
+                    <div class='modal-body' name='product-img-section' style='display: flex; flex-direction: column; justify-content: center; align-items: center;'>
+                        <div><h6 name="upload-img-name-txt-container"></h6></div><hr>
+                        <div class="drag-drop-container">
+                            <h3>Upload file (max size 100MB) here:</h3><br>
+                            <form class="file-upload-form" method="POST" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <label class="upload-label">
+                                        <span class="material-symbols-rounded">image</span>
+                                        <p class="drag-text">
+                                            Drag & Drop to upload file<br>
+                                            Or<br>Click to upload file
+                                        </p>
+                                        <br>
+                                    </label>
+                                    <input type="file" name="upload-img-input" id="UploadImgInput"/>
+                                </div>
+                                <br>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class='modal-footer'>
+                        <div class='grid-body-content-section two-grid'>
+                            <button type='button' class='btn btn-primary update-product-img-btn' name='upload-product-img' data-sendingrequest="0">Upload File</button>
+                            <button type='button' class='btn btn-primary update-product-img-btn' name='down-load-file' disabled>Download File</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div class='modal' id='ItemInfoModal' tabindex='-1' role='dialog' aria-labelledby='ItemInfoModalLabel' aria-hidden='true' name='product-info-modal'>
             <div class='modal-dialog'>
                 <div class='modal-content' style='min-width: 300px; width: 98vw;'>
@@ -158,6 +196,7 @@
                                 <th class='border-0 table-header' scope='col'>Ordered On</th>
                                 <th class='border-0 table-header' scope='col'>Order Week</th>
                                 <th class='border-0 table-header' scope='col'></th>
+                                <th class='border-0 table-header' scope='col'>Invoice</th>
                                 <th class='border-0 table-header' scope='col'>Vendor</th>
                                 <th class='border-0 table-header' scope='col'></th>
                                 <th class='border-0 table-header' scope='col'>Category</th>
