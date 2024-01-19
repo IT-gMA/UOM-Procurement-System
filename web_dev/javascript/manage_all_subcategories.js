@@ -293,8 +293,8 @@ function render_category_card_preview(category, parent_container){
 function format_json_category(json_category, for_insert=false){
     return {
         'category_uid': for_insert ? 'new-subcategory-1' : json_category.prg_uomprocurementservicesubcatgeoryid,
-        'category_name': for_insert ? '' : json_category.prg_name,
-        'trimmed_category_name': for_insert ? '' : clean_white_space(json_category.prg_name.trim().toLowerCase()),
+        'category_name': for_insert ? '' : sanitise_str(json_category.prg_name),
+        'trimmed_category_name': for_insert ? '' : clean_white_space(sanitise_str(json_category.prg_name).trim().toLowerCase()),
         'createdon_str': for_insert ? format_dt(new Date()) : format_dt(new Date(json_category.createdon)),
         'createdon': for_insert ? `${new Date()}` : json_category.createdon,
         'modifiedon_str': for_insert ? format_dt(new Date()) : format_dt(new Date(json_category.modifiedon)),

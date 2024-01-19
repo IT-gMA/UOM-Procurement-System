@@ -251,7 +251,7 @@ function render_product_vendor_map_table(target_table){
 
 
 function format_product_vendor_map(json_mapping, vendor_info, has_next){
-    return {
+    return sanitise_json_obj({
         'product_uid': json_mapping['_prg_product_value'],
         'product_barcode': is_json_data_empty(json_mapping['product.prg_unitbarcodes']) ? '' : json_mapping['product.prg_unitbarcodes'],
         'product_name': json_mapping['_prg_product_value@OData.Community.Display.V1.FormattedValue'],
@@ -288,7 +288,7 @@ function format_product_vendor_map(json_mapping, vendor_info, has_next){
         'is_active': json_mapping.statecode === 0,
         'has_next': has_next,
         'curr_page_num': vendor_info.curr_page_num,
-    }
+    });
 }
 
 function remove_input_red_color(input_dom){
@@ -401,8 +401,8 @@ function render_filter_options(dropdown_container, filter_opts, sort_by_label=fa
         dropdown_container.append(`
         <div class='dropdown-item order-attr-filter-opt-container'>
             <input class='form-check-input filter-opt-radio' type='checkbox' name='${dropdown_container.attr('name')}-checkbox'
-                    data-label='${filter_opt.label}' data-value='${filter_opt.value}' data-parentul='${dropdown_container.attr('name')}'>
-            <label class='form-check-label'>${filter_opt.label}</label>
+                    data-label='${DOMPurify.sanitize(filter_opt.label)}' data-value='${filter_opt.value}' data-parentul='${dropdown_container.attr('name')}'>
+            <label class='form-check-label'>${DOMPurify.sanitize(filter_opt.label)}</label>
         </div>
         `);
     });
@@ -428,8 +428,7 @@ function render_body_content(){
             hide_elems_on_load(true);
             $('.content-section.order-history-content-section').toggle(false);
         }, success: function(response, status, xhr){
-            let br
-            response.vendors.forEach(vendor => {
+            sanitise_json_obj(response.vendors).forEach(vendor => {
                 vendor_filter_options.push({
                     'value': vendor.prg_uomprocurementvendorid,
                     'label': vendor.prg_name,
@@ -442,15 +441,15 @@ function render_body_content(){
                     'is_loading_more': false,
                 });
             });
-            response.brands.forEach(brand => {
+            sanitise_json_obj(response.brands).forEach(brand => {
                 brand_filter_options.push({'label': brand.prg_name, 'value': brand.prg_ggorderbrandid});
             });
 
-            response.sub_categories.forEach(sub_category => {
+            sanitise_json_obj(response.sub_categories).forEach(sub_category => {
                 subcategory_filter_options.push({'label': sub_category.prg_name, 'value': sub_category.prg_uomprocurementservicesubcatgeoryid});
             });
 
-            response.categories.forEach(category => {
+            sanitise_json_obj(response.categories).forEach(category => {
                 category_filter_options.push({'label': category.prg_name, 'value': category.prg_uomprocurementservicecategoriesid});
             });
 
@@ -549,7 +548,7 @@ $(document).ready(function(){
         </link-entity>`;
         const filtered_product_name_xml_query = `
         <filter type="and">
-            <condition attribute="prg_name_trimmed" operator="like" value="%${clean_white_space(searched_products.trim().toLowerCase())}%" />
+            <condition attribute="prg_name_trimmed" operator="like" value="%${clean_white_space(escape_xml_string(searched_products).trim().toLowerCase())}%" />
         </filter>`;
         const filtered_brand_xml_query = filtered_brand_opts.includes(null) ? `
         <link-entity name="prg_ggorderbrand" from="prg_ggorderbrandid" to="prg_brand" alias="brand" link-type="outer">

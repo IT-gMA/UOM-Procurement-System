@@ -310,12 +310,12 @@ function is_product_table_row_from_insertion(input_elem){
 }
 function render_category_card_preview(category, parent_container){
     parent_container.append(`<div class='card-container category-card' name='category-card-container'
-        data-name='${category.category_name}'
+        data-name='${sanitise_str(category.category_name)}'
         style='background-color: ${category.hex_colour}'>
         <div class='thumbnail-img-container'><img src='${category.thumbnail_img}'/></div><br><br>
         <div class='text-container'><div class='desc-txt_bx'>
                 <div class='desc-txt_bx'>
-                    <span style='font-weight: bold;'>${category.category_name}</span>
+                    <span style='font-weight: bold;'>${sanitise_str(category.category_name)}</span>
                 </div>
             </div><span class="material-symbols-rounded">chevron_right</span></div><br></div>`);
 }
@@ -324,12 +324,12 @@ function render_category_card_preview(category, parent_container){
 function format_json_category(json_category, for_insert=false){
     return {
         'category_uid': for_insert ? 'new-category-1' : json_category.prg_uomprocurementservicecategoriesid,
-        'category_name': for_insert ? '' : json_category.prg_name,
-        'trimmed_category_name': for_insert ? '' : clean_white_space(json_category.prg_name.trim().toLowerCase()),
+        'category_name': for_insert ? '' : sanitise_str(json_category.prg_name),
+        'trimmed_category_name': for_insert ? '' : sanitise_str(clean_white_space(json_category.prg_name.trim().toLowerCase())),
         'hex_colour': for_insert ? '#E9E9E9' : `#${json_category.prg_hexcolour}`,
         'thumbnail_img': covert_product_b64_img_to_url(json_category.crcfc_img_content_mime_type, json_category.crcfc_img_content),
         'img_content': for_insert || is_json_data_empty(json_category.crcfc_img_content) || is_whitespace(json_category.crcfc_img_content) ? undefined : json_category.crcfc_img_content,
-        'img_content_mime_type': for_insert || is_json_data_empty(json_category.crcfc_img_content_mime_type) || is_whitespace(json_category.crcfc_img_content_mime_type) ? undefined : json_category.crcfc_img_content_mime_type,
+        'img_content_mime_type': for_insert || is_json_data_empty(json_category.crcfc_img_content_mime_type) || is_whitespace(json_category.crcfc_img_content_mime_type) ? undefined : sanitise_str(json_category.crcfc_img_content_mime_type),
         'img_file': undefined,
         'createdon_str': for_insert ? format_dt(new Date()) : format_dt(new Date(json_category.createdon)),
         'createdon': for_insert ? `${new Date()}` : json_category.createdon,

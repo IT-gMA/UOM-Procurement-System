@@ -332,7 +332,7 @@ function render_body_content(){
                         alert('Unable to load data at this time');
                         return hide_elems_on_load(true);
                     }
-                    category_json_datas.forEach(category_json_data => {
+                    sanitise_json_obj(category_json_datas).forEach(category_json_data => {
                         // Append each Category Json Object as an HTML card to its parent grid container
                         render_category_card(category_json_data);
                     });
@@ -395,12 +395,12 @@ function format_product_vendor_map(product, vendor_product_map, cart_item=undefi
         formatted_product['num_in_cart'] = cart_item.prg_stockordered;
         formatted_product['total_price'] = cart_item.prg_stockordered * formatted_product['price'];
     }
-    return formatted_product;
+    return sanitise_json_obj(formatted_product);
 }
 
 
 function get_product_info_markup(info_name, info_content, is_last=false){
-    return `<h6><span style='font-weight: bold;'>${info_name}: </span>${info_content}</h6>${is_last ? '' : '<br>'}`;
+    return `<h6><span style='font-weight: bold;'>${info_name}: </span>${sanitise_json_obj(info_content)}</h6>${is_last ? '' : '<br>'}`;
 }
 
 
@@ -579,15 +579,15 @@ $(document).ready(function(){
             contentType: 'application/json',
             accept: 'application/json;odata=verbose',
             timeout: AJAX_TIMEOUT_DURATION,
-            data: JSON.stringify({'searched_txt': clean_white_space(PRODUCT_SEARCH_TEXT_FIELD.val().toLowerCase().trim())}),
+            data: JSON.stringify({'searched_txt': clean_white_space(escape_xml_string(PRODUCT_SEARCH_TEXT_FIELD.val()).toLowerCase().trim())}),
             complete: function(response, status, xhr){
                 disable_button(APPLY_SEARCH_BTN, false, 'Apply Search');
             },
             success: function(response, status, xhr){
-                console.log(response);
-                const products = response;
+                const products = sanitise_json_obj(response);
+                console.log(products);
                 let formatted_products = [];
-                products.forEach(product_json => {
+                sanitise_json_obj(products).forEach(product_json => {
                     formatted_products.push(format_product_vendor_map(format_obj_prg_key({...product_json}), extract_sub_object(product_json, 'product_vendor_map.')));
                 });
 
@@ -652,7 +652,7 @@ $(document).ready(function(){
                 modal_content_body.find('.modal-body').append(`<div class="cart-item-container-section"></div>`);
 
                 let formatted_products = [];
-                cart_items.forEach(cart_item => {
+                sanitise_json_obj(cart_items).forEach(cart_item => {
                     formatted_products.push(format_product_vendor_map(format_obj_prg_key(extract_sub_object({...cart_item}, 'product.')), extract_sub_object({...cart_item}, 'product_vendor_map.'), cart_item));
                 });
                 render_product_cards(formatted_products, modal_content_body.find('.cart-item-container-section'), false);

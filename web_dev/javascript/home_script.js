@@ -316,7 +316,7 @@ function render_body_content(){
                         alert('Unable to load data at this time');
                         return hide_elems_on_load(true);
                     }
-                    category_json_datas.forEach(category_json_data => {
+                    sanitise_json_obj(category_json_datas).forEach(category_json_data => {
                         // Append each Category Json Object as an HTML card to its parent grid container
                         render_category_card(category_json_data);
                     });
@@ -510,14 +510,8 @@ $(document).ready(function(){
                 const product_min_quantity = parseInt(parent_card.attr('data-minquantity'));
 
                 parent_card.attr('data-vendorstockordered', all_ordered_quantity);
-                //parent_card.attr('data-maxquantity', vendor_stock_on_hand - all_ordered_quantity);
                 parent_card.attr('data-maxquantity', vendor_stock_on_hand);
                 parent_card.find('[name=product-quantity-input-field]').attr('data-maxquantity', parent_card.attr('data-maxquantity'));
-
-                /*if (!response['responseJSON']['valid']) {
-                    if (vendor_stock_on_hand - all_ordered_quantity - product_min_quantity < 0) return process_product_out_of_quantity(false, parent_card);
-                    return alert(`Only ${vendor_stock_on_hand - all_ordered_quantity} ${parent_card.attr('data-orderunitname')} of ${parent_card.attr('data-name')} left for order`);
-                }*/
 
                 if (!response['responseJSON']['existing_order']){
                     let num_products_in_cart = parseInt(CART_BUTTON.attr('data-quantity'));

@@ -1080,8 +1080,11 @@ $(document).ready(function(){
                 disable_button(LOAD_MORE_ORDERS_BTN, !response.has_next_records);
                 response.has_next_records ? LOAD_MORE_ORDERS_BTN.show() : LOAD_MORE_ORDERS_BTN.hide();
                 if (response.has_next_records) CURR_PAGE_NUM++;
-
-                
+                if (response.uom_requests.length < 1){
+                    _complete_request(0);
+                    render_loading_progress_bar(100);
+                    return alert('No data to load');
+                }
                 render_loading_progress_bar(0);
                 response.uom_requests.forEach((uom_request, i) => {
                     (function(y) {
@@ -1098,7 +1101,7 @@ $(document).ready(function(){
 
 
     CLEAR_FILTER_BTN.on('click', function(event){
-        $('input[name=product-search-input-field]').val(null);
+        $('div[name=search-filter-container]').find('.search-text-field.filter-search-text-field').val(null);
         $(document).find('.form-check-input').prop('checked', false);
         $(document).find('.form-check-input').attr('checked', false);
 

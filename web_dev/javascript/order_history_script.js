@@ -1,9 +1,10 @@
-const CUSTOMER_UID = 'e391c7cb-e9c7-ed11-b597-00224897d329';
+const CUSTOMER_UID = '0994aa57-468f-ee11-be36-0022481170b3';
 const AJAX_TIMEOUT_DURATION = 864000000;
 const MAX_FILE_SIZE = 131072000; // in KB
 const PLACE_HOLDER_IMG_URL = 'https://i.ibb.co/VMPPhzc/place-holder-catering-item-img.webp';
 
 const APPLY_FILTER_BTN = $('button[name=apply-search-filter-btn]');
+const LOAD_MORE_ORDERS_BTN = $('button[name=load-more-orders-btn]');
 const CLEAR_FILTER_BTN = $('button[name=clear-search-filter-btn]');
 const UPLOAD_FILE_BTN = $('button[name=upload-product-img]');
 const DOWNLOAD_FILE_BTN = $('button[name=down-load-file]');
@@ -64,7 +65,7 @@ const PAYMENT_STATUS_FILTER_OPTS = [
     {'value': 2, 'label': 'Order Refunded', 'colour': 'red'},
 ]
 
-let brand_filter_options = [];
+let brand_filter_options = [{'value': -1, 'label': 'No Brand'}];
 let product_filter_options = [];
 let category_filter_options = [];
 let subcategory_filter_options = [];
@@ -84,11 +85,14 @@ const TODAY_DATE = new Date();
 const ONE_MONTH_AGO = new Date();
 ONE_MONTH_AGO.setMonth(TODAY_DATE.getMonth() - 1);
 
+const RECORD_COUNT = 100;
+let PAGE_NUM = 1;
+let QUERY_INITIAL_DATA = true;
+
 /*Util Functions*/
 function get_user_id(){
     const elem_user_id = '{{user.id}}';
-    return elem_user_id.includes('{{') && elem_user_id.includes('}}') ? undefined : elem_user_id;
-    //return elem_user_id.includes('{{') && elem_user_id.includes('}}') ? null : elem_user_id;
+    return elem_user_id.includes('{{') && elem_user_id.includes('}}') ? window.location = `${window.location.origin}/No-Data/` : elem_user_id;
 }
 
 function clean_white_space(input_string, all=true){
@@ -108,10 +112,6 @@ function capitalise_str(input_str){
     return input_str.charAt(0).toUpperCase() + input_str.slice(1);
 }
 
-function get_category_relative_path(category_uid){
-    return `${window.location.origin}/view-products?category-uid=${category_uid}`;
-}
-
 function get_sum_num_arr(num_arr, round_to=-1, base=0){
     const sum = num_arr.reduce(function (accumulator, curr_num) {
         return accumulator + curr_num;
@@ -126,7 +126,6 @@ function get_min_max_from_dt_arr(dt_arr){
 function is_within_datetime_range(input_date, min_date, max_date){
     return new Date(`${min_date}`) <= new Date(`${input_date}`) && new Date(`${input_date}`) <= new Date(`${max_date}`);
 }
-
 
 function get_daterange_input_val(dt_input){
     const min_date = parse_dt_str_and_obj(dt_input.attr('data-start'), false);
@@ -147,30 +146,6 @@ function to_datetime(datetime_str, smallest=true){
     const datetime = new Date(datetime_str);
     if (isNaN(datetime)) return new Date(smallest ? "0000-01-01T00:00:00" : "9999-12-31T23:59:59");
     return datetime;
-}
-
-function _get_text_padding(max_length, curr_txt, html_tag='span'){
-    return '';
-    let padding_length = max_length - curr_txt.length;
-    if (padding_length < 1) padding_length = 1;
-    return `<${html_tag} id='text-padding'>${'#'.repeat(max_length - curr_txt.length)}</${html_tag}>`;
-}
-
-function verify_integer_input(integer_input, place_holder='', min_value=Number.NEGATIVE_INFINITY, max_value=Number.POSITIVE_INFINITY){
-    // Format an Input text Field's value to integers and verify whether the resulting integer
-    // is within the min max range. If the value is out of range assign it with min or max value
-    let valid_input = true;
-    let curr_value = integer_input.val();
-    if (!integer_input.val() || is_whitespace(curr_value)) return valid_input;
-    curr_value = parseInt(curr_value.replace(/\D/g, ''));
-    if (isNaN(curr_value)){
-        integer_input.val(null);
-        return false;
-    }
-    if (curr_value < min_value) curr_value = min_value;
-    if (curr_value > max_value) curr_value = max_value;
-    integer_input.val(curr_value);
-    return curr_value >= min_value;
 }
 
 function is_json_data_empty(data){
@@ -355,7 +330,6 @@ function get_product_info_markup(info_name, info_content, is_last=false){
     return `<h6><span style='font-weight: bold;'>${info_name}: </span>${info_content}</h6>${is_last ? '' : '<br>'}`;
 }
 
-
 function verify_integer_input(integer_input, place_holder='', min_value=Number.NEGATIVE_INFINITY, max_value=Number.POSITIVE_INFINITY){
     let valid_input = true;
     let curr_value = integer_input.val();
@@ -493,6 +467,39 @@ function ajax_retrieve_invoice(parent_th=undefined){
         },
     });
 }
+
+function _split_searched_results(searched_input_dom){
+    if (!searched_input_dom.val() || is_whitespace(searched_input_dom.val())) return[''];
+    const searched_txt = clean_white_space(searched_input_dom.val().trim().toLowerCase());
+    const searched_vals = searched_txt.split(';;');
+    if (searched_vals.length < 1 || is_whitespace(searched_txt)) return [''];
+    return searched_vals.filter(searched_val => !is_whitespace(searched_val));
+}
+
+function format_dt_to_xml_query_dt(input_dt) {
+    try {
+        // Split the input date into day, month, and year components
+        const dateComponents = input_dt.split('/');
+
+        // Ensure that we have exactly three components
+        if (dateComponents.length !== 3) {
+            throw new Error('Invalid date format');
+        }
+
+        // Rearrange the components to the "MM/DD/YYYY" format
+        const month = dateComponents[1];
+        const day = dateComponents[0];
+        const year = dateComponents[2];
+
+        // Create a new date string in "MM/DD/YYYY" format
+        const convertedDate = `${year}-${month}-${day}`;
+
+        return convertedDate;
+    } catch (error) {
+        // Handle the error, e.g., by returning an error message or throwing the error
+        return undefined;
+    }
+}
 /*End of Util functions*/
 
 function render_filter_options(dropdown_container, filter_opts, sort_by_label=false){
@@ -501,8 +508,8 @@ function render_filter_options(dropdown_container, filter_opts, sort_by_label=fa
         dropdown_container.append(`
         <div class='dropdown-item'>
             <input class='form-check-input filter-opt-radio' type='checkbox' name='${dropdown_container.attr('name')}-checkbox'
-                    data-label='${filter_opt.label}' data-value='${filter_opt.value}' data-parentul='${dropdown_container.attr('name')}'>
-            <label class='form-check-label'>${filter_opt.label}</label>
+                    data-label='${DOMPurify.sanitize(filter_opt.label)}' data-value='${filter_opt.value}' data-parentul='${dropdown_container.attr('name')}'>
+            <label class='form-check-label'>${DOMPurify.sanitize(filter_opt.label)}</label>
         </div>
         `);
     });
@@ -538,7 +545,7 @@ function make_request_status_checkbox(checkbox_name, data_attributes){
                         ${data_attributes.map(data_attr => `${data_attr.data_name}='${data_attr.data_val}'`).join(' ')}/>`;
 }
 
-function render_order_history_data_row(sort_latest=true, data_list=undefined){
+function render_order_history_data_row(data_list=undefined, sort_latest=true){
     const formatted_uom_orders = data_list ?? FORMATTED_UOM_ORDERS;
     formatted_uom_orders.sort((a, b) => a.subcategory_name.localeCompare(b.subcategory_name));
     formatted_uom_orders.sort((a, b) => a.category_name.localeCompare(b.category_name));
@@ -678,29 +685,131 @@ function render_order_history_data_row(sort_latest=true, data_list=undefined){
     });
 }
 
-function render_body_content(){
+function disable_page_filters(enabled=false){
+    disable_filter_elements(!enabled, $('.content-section.search-and-filter-section').find('.dropdown-item'));
+    disable_filter_elements(!enabled, $(document).find('.content-section.search-and-filter-section').find('div[name=search-filter-container]').find('.search-text-field.filter-search-text-field'));
+    disable_filter_elements(!enabled, $('div[name=order-date-filter-opts]'));
+}
+
+function toggle_content_elements(show=true){
+    [$('section[name=order-stat-container-section]'), $('div[name=mass-order-status-selection-opt-container]').closest('section'), ORDER_HISTORY_TABLE.closest('section'), $('div[name=num-total-order-txt-container]').closest('section')].forEach(dom => {
+        dom.toggle(show);
+    });
+}
+
+function handle_load_query_completion(){
+    if (QUERY_INITIAL_DATA){
+        QUERY_INITIAL_DATA = false;
+        hide_elems_on_load(true);
+        $('input[name=sort-option-radio-checkbox][data-attr="createdon"][data-desc="1"]').prop('checked', true);
+        disable_filter_elements();
+        LOAD_MORE_ORDERS_BTN.toggle(false);
+        disable_button(APPLY_FILTER_BTN, false, 'Apply Filters');
+        disable_button(APPLY_ORDER_INFO_CHANGES_BTN, true);
+        disable_page_filters(true);
+    }else{
+        LOAD_MORE_ORDERS_BTN.toggle(PAGE_NUM > 0);
+        disable_button(APPLY_FILTER_BTN, true, 'Apply Filters');
+        disable_button(CLEAR_FILTER_BTN, false, 'Clear Filters');
+        disable_page_filters(false);
+    }
+    disable_button(LOAD_MORE_ORDERS_BTN, PAGE_NUM < 1, 'Load More');
+    toggle_content_elements(true);
+}
+
+function query_uom_requests_and_orders(from_start=false){
+    disable_page_filters(false);
+    let filtered_vendor_xml_query = '';
+    let filtered_order_status_xml_query = '';
+    let filtered_payment_status_xml_query = '';
+    let filtered_brand_xml_query = '';
+    let createdon_xml_filter_query = '';
+    let filtered_category_xml_query = '';
+    let filtered_subcategory_xml_query = '';
+    let filtered_product_name_xml_query = '';
+    let filtered_vendor_code_xml_query = '';
+    let filtered_order_code_xml_query = '';
+
+    if (!from_start){
+        const filtered_brands = get_selected_filter_values(`${BRAND_FILTER_DROPDOWN.attr('name')}-checkbox`);
+        let start_createdon = format_dt_to_xml_query_dt(ORDER_DATE_FILTER_DROPDOWN.attr('data-start'));
+        if (start_createdon === undefined) start_createdon = format_dt_to_xml_query_dt(parse_dt_str_and_obj(new Date(ORDER_DATE_FILTER_DROPDOWN.attr('min')), true));
+        let end_createdon = format_dt_to_xml_query_dt(ORDER_DATE_FILTER_DROPDOWN.attr('data-end'));
+        if (end_createdon === undefined) end_createdon = format_dt_to_xml_query_dt(parse_dt_str_and_obj(new Date(ORDER_DATE_FILTER_DROPDOWN.attr('max')), true));
+
+        filtered_vendor_xml_query = `<condition attribute="prg_vendor" operator="in">${get_selected_filter_values(`${VENDOR_FILTER_DROPDOWN.attr('name')}-checkbox`).map(data => `<value>${data}</value>`).join('\n')}</condition>`;
+        filtered_order_status_xml_query = `<condition attribute="prg_orderstatus" operator="in">${get_selected_filter_values(`${ORDER_STATUS_FILTER_DROPDOWN.attr('name')}-checkbox`).map(data => `<value>${data}</value>`).join('\n')}</condition>`;
+        filtered_payment_status_xml_query = `<condition attribute="crcfc_paymentstatus" operator="in">${get_selected_filter_values(`${PAYMENT_STATUS_FILTER_DROPDOWN.attr('name')}-checkbox`).map(data => `<value>${data}</value>`).join('\n')}</condition>`;
+        createdon_xml_filter_query = `<condition attribute="createdon" operator="on-or-after" value="${start_createdon}"/>\n<condition attribute="createdon" operator="on-or-before" value="${end_createdon}"/>`;
+        filtered_category_xml_query = `<condition attribute="prg_category" operator="in">${get_selected_filter_values(`${CATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`).map(data => `<value>${data}</value>`).join('\n')}</condition>`;
+        filtered_subcategory_xml_query = `<condition attribute="prg_subcategory" operator="in">${get_selected_filter_values(`${SUBCATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`).map(data => `<value>${data}</value>`).join('\n')}</condition>`;
+
+        if (filtered_brands.length < 1 || filtered_brands.length >= brand_filter_options){
+            filtered_brand_xml_query = '';
+        }else if (filtered_brands.includes('-1') && filtered_brands.length === 1) {
+            filtered_brand_xml_query = '<condition attribute="prg_brand" operator="null"/>';
+        }else if (filtered_brands.includes('-1') && filtered_brands.length > 1) {
+            filtered_brand_xml_query = `<filter type="or"><condition attribute="prg_brand" operator="null"/><condition attribute="prg_brand" operator="in">
+                                            ${filtered_brands.filter(data => data !== '-1').map(data => `<value>${data}</value>`).join('\n')}</condition></filter>`;
+        }else{
+            filtered_brand_xml_query = `<condition attribute="prg_brand" operator="in">${filtered_brands.map(data => `<value>${data}</value>`).join('\n')}</condition>`;
+        }
+
+        filtered_product_name_xml_query = `<filter type="or">${str_arr_escape_xml(_split_searched_results($('input[name=product-search-input-field]'))).map(data => `<condition attribute="prg_name_trimmed" operator="like" value="%${data}%"/>`).join('\n')}</filter>`;
+        filtered_vendor_code_xml_query = `<filter type="or">${str_arr_escape_xml(_split_searched_results($('input[name=vendor-code-search-input-field]'))).map(data => `<condition attribute="prg_code" operator="like" value="%${data}%"/>`).join('\n')}</filter>`;
+        filtered_order_code_xml_query = `<filter type="or">${str_arr_escape_xml(_split_searched_results($('input[name=order-search-input-field]'))).map(data => `<condition attribute="prg_uhhname" operator="like" value="%${data}%"/>`).join('\n')}</filter>`;
+    }
+
+    function _handle_empty_data_load(){
+        alert('No data can be found');
+        PAGE_NUM = 0;
+        handle_load_query_completion();
+        toggle_content_elements(false);
+    }
     $.ajax({
         type: 'POST',
-        url: 'https://prod-30.australiasoutheast.logic.azure.com:443/workflows/ddf66dfe3a30480b82d1fa09aa287d66/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=BDEBe_lroZHou_5EJJydWVazvwXtpWo54Z7w61IpNFs',
+        url: 'https://prod-12.australiasoutheast.logic.azure.com:443/workflows/fda9663c6c194bd68ffb6720b5968c15/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=5b3kRE3Pr-gpMpYka4vu_C9Lo2qzGk0JxVqIcPd2qtU',
         contentType: 'application/json',
         accept: 'application/json;odata=verbose',
         timeout: AJAX_TIMEOUT_DURATION,
-        data: JSON.stringify({'user_uid': CUSTOMER_UID}),
-        complete: function(response, status, xhr){
-            if (String(status) !== 'success'){
-                alert('Unable to load data at this time');
-                return window.location = `${window.location.origin}/No-Data/`;
-                return hide_elems_on_load(true);
+        data: JSON.stringify({'user_uid': CUSTOMER_UID, 'page_num': PAGE_NUM, 'record_count': RECORD_COUNT, 'query_initial_data': QUERY_INITIAL_DATA,
+                                'filtered_vendor_xml_query': filtered_vendor_xml_query, 'filtered_order_status_xml_query': filtered_order_status_xml_query, 'filtered_payment_status_xml_query': filtered_payment_status_xml_query, 'filtered_brand_xml_query': filtered_brand_xml_query, 'createdon_xml_filter_query': createdon_xml_filter_query, 'filtered_category_xml_query': filtered_category_xml_query, 'filtered_subcategory_xml_query': filtered_subcategory_xml_query,
+                            'filtered_product_name_xml_query': filtered_product_name_xml_query, 'filtered_vendor_code_xml_query': filtered_vendor_code_xml_query, 'filtered_order_code_xml_query': filtered_order_code_xml_query,
+                            'sort_xml_filter': get_sort_query()}),
+        complete: function(response, status, xhr){},
+        success: function(response, status, xhr){
+            if (QUERY_INITIAL_DATA && !response.has_data) return;
+            if (QUERY_INITIAL_DATA){
+                sanitise_json_obj(response.brands).forEach(brand => brand_filter_options.push({'value': brand.prg_ggorderbrandid, 'label': brand.prg_name}));
+                sanitise_json_obj(response.products).forEach(product => product_filter_options.push({'value': product.prg_uomprocurementserviceproductsid, 'label': product.prg_name}));
+                sanitise_json_obj(response.categories).forEach(category => category_filter_options.push({'value': category.prg_uomprocurementservicecategoriesid, 'label': category.prg_name}));
+                sanitise_json_obj(response.subcategories).forEach(subcategory => subcategory_filter_options.push({'value': subcategory.prg_uomprocurementservicesubcatgeoryid, 'label': subcategory.prg_name}));
+                sanitise_json_obj(response.vendors).forEach(vendor => vendor_filter_options.push({'value': vendor.prg_uomprocurementvendorid, 'label': vendor.prg_name}));
+
+                render_filter_options(BRAND_FILTER_DROPDOWN, brand_filter_options);
+                //render_filter_options(PRODUCT_FILTER_DROPDOWN, product_filter_options, true);
+                render_filter_options(CATEGORY_FILTER_DROPDOWN, category_filter_options);
+                render_filter_options(SUBCATEGORY_FILTER_DROPDOWN, subcategory_filter_options);
+                render_filter_options(VENDOR_FILTER_DROPDOWN, vendor_filter_options);
+                render_filter_options(ORDER_STATUS_FILTER_DROPDOWN, ORDER_STATUS_FILTER_OPTS);
+                render_filter_options(PAYMENT_STATUS_FILTER_DROPDOWN, PAYMENT_STATUS_FILTER_OPTS);
+                set_up_date_range_picker(ORDER_DATE_FILTER_DROPDOWN, new Date(`${response.oldest_order_date}`), new Date(`${response.latest_order_date}`));
+                //week_of_yr_data = [];
+                ORDER_STATUS_FILTER_OPTS.filter(data => data.selectable).forEach(data => {
+                    $('div[name=mass-order-status-selection-opt-container]').append(`
+                        <div class='filter-container opt-selection-btn' id='sort-container' style='background-color: ${data.colour}; color: ${data.text_color}'
+                            name='mass-order-status-selection-opt-btn' data-value='${data.value}' data-label='${data.label}'>
+                            <a class='nav-link' data-bs-toggle='dropdown' aria-expanded='false'>${data.label}</a>
+                        </div>
+                    `);
+                });
             }
-            const uom_requests = response['responseJSON'];
-            const num_orders = get_sum_num_arr(response['responseJSON'].map(uom_request => uom_request.crcfc_num_orders));
-
-            if (uom_requests.length < 1 || num_orders < 1) return window.location = `${window.location.origin}/No-Data/`;
-
-            $('div[name=spinner-resource-loader-container]').hide();
-            $('div[name=progress-resource-loader-container]').show();
+            if (!QUERY_INITIAL_DATA && !response.has_data) return _handle_empty_data_load();
+            render_loading_progress_bar(0);
+            const uom_requests = sanitise_json_obj(response.requests);
+            PAGE_NUM = response.has_next ? PAGE_NUM + 1 : 0;
             let idx = 0;
-
+            let _curr_uom_orders = [];
             function retrieve_uom_orders(uom_request){
                 function assign_ordered_product_info(product, formatted_uom_order){
                     formatted_uom_order['order_unit_code'] = product.prg_orderunit;
@@ -720,55 +829,27 @@ function render_body_content(){
                     formatted_uom_order['bulk_order_unit_code'] = is_json_data_empty(product.prg_bulkorder) ? 0 : product.prg_bulkorder;
                     formatted_uom_order['bulk_order_unit_name'] = is_json_data_empty(product.prg_bulkorder) ? 'N/A' : product['prg_bulkorder@OData.Community.Display.V1.FormattedValue'];
                     // Only append valid order with a formatted est price
-                    if (formatted_uom_order.est_price > 0) FORMATTED_UOM_ORDERS.push(formatted_uom_order);
+                    if (formatted_uom_order.est_price > 0) {
+                        FORMATTED_UOM_ORDERS.push(sanitise_json_obj(formatted_uom_order));
+                        _curr_uom_orders.push(sanitise_json_obj(formatted_uom_order));
+                    }
                 }
 
                 function _finalise_request(incr=true){
-                    let is_loop = idx < num_orders - 1;
-                    render_loading_progress_bar(is_loop ? (100 * idx) / num_orders : 99.9);
+                    let is_loop = idx < uom_requests.length - 1;
+                    render_loading_progress_bar(is_loop ? (100 * idx) / uom_requests.length : 99.9);
                     if (is_loop) return incr ? idx++ : idx;
-                    if (FORMATTED_UOM_ORDERS.length < 1) return window.location = `${window.location.origin}/No-Data/`;
-
-                    sleep(10000);
-                    ORDER_STATUS_FILTER_OPTS.filter(data => data.selectable).forEach(data => {
-                        $('div[name=mass-order-status-selection-opt-container]').append(`
-                            <div class='filter-container opt-selection-btn' id='sort-container' style='background-color: ${data.colour}; color: ${data.text_color}'
-                                name='mass-order-status-selection-opt-btn' data-value='${data.value}' data-label='${data.label}'>
-                                <a class='nav-link' data-bs-toggle='dropdown' aria-expanded='false'>${data.label}</a>
-                            </div>
-                        `);
-                    });
-                    FORMATTED_UOM_ORDERS.forEach(uom_order => {
-                        if (brand_filter_options.length < 0 || !brand_filter_options.map(item => item.value).includes(uom_order.brand_code)) brand_filter_options.push({'value': uom_order.brand_code, 'label': uom_order.brand_name});
-                        if (product_filter_options.length < 0 || !product_filter_options.map(item => item.value).includes(uom_order.product_uid)) product_filter_options.push({'value': uom_order.product_uid, 'label': uom_order.product_name});
-                        if (subcategory_filter_options.length < 0 || !subcategory_filter_options.map(item => item.value).includes(uom_order.subcategory_uid)) subcategory_filter_options.push({'value': uom_order.subcategory_uid, 'label': uom_order.subcategory_name});
-                        if (category_filter_options.length < 0 || !category_filter_options.map(item => item.value).includes(uom_order.category_uid)) category_filter_options.push({'value': uom_order.category_uid, 'label': uom_order.category_name});
-                        if (vendor_filter_options.length < 0 || !vendor_filter_options.map(item => item.value).includes(uom_order.vendor_uid)) vendor_filter_options.push({'value': uom_order.vendor_uid, 'label': uom_order.vendor_name});
-                        if (week_of_yr_data.length < 0 || !week_of_yr_data.map(item => item.value).includes(uom_order.week_of_year_str)) week_of_yr_data.push({'value': uom_order.week_of_year_str, 'label': uom_order.week_of_year_str});
-                    });
-
-                    const {min, max} = get_min_max_from_dt_arr(FORMATTED_UOM_ORDERS.map(uom_order => uom_order.createdon));
-                    set_up_date_range_picker(ORDER_DATE_FILTER_DROPDOWN, min, max);
-
-                    render_filter_options(BRAND_FILTER_DROPDOWN, brand_filter_options);
-                    render_filter_options(PRODUCT_FILTER_DROPDOWN, product_filter_options, true);
-                    render_filter_options(CATEGORY_FILTER_DROPDOWN, category_filter_options);
-                    render_filter_options(SUBCATEGORY_FILTER_DROPDOWN, subcategory_filter_options);
-                    render_filter_options(VENDOR_FILTER_DROPDOWN, vendor_filter_options);
-                    render_filter_options(ORDER_STATUS_FILTER_DROPDOWN, ORDER_STATUS_FILTER_OPTS);
-                    render_filter_options(PAYMENT_STATUS_FILTER_DROPDOWN, PAYMENT_STATUS_FILTER_OPTS);
-
+                    if (QUERY_INITIAL_DATA && FORMATTED_UOM_ORDERS.length < 1) return window.location = `${window.location.origin}/No-Data/`;
+                    if (FORMATTED_UOM_ORDERS.length < 1) return _handle_empty_data_load();
                     render_chart_js_content();
-                    render_order_history_data_row();
-                    hide_elems_on_load(true);
-                    $('#sort-by-createdon-desc').prop('checked', true);
-                    disable_filter_elements();
+                    render_order_history_data_row(_curr_uom_orders);
+                    handle_load_query_completion();
                 }
 
                 function format_uom_order(uom_order){
                     const request_createdon_dt = new Date(uom_request.createdon) ;
                     const is_request_createdon_within_one_month = request_createdon_dt >= ONE_MONTH_AGO;
-                    let formatted_uom_order = {
+                    let formatted_uom_order = sanitise_json_obj({
                         'order_code': `${uom_request.crcfc_requestcode}-${uom_order['_prg_vendorcode_value@OData.Community.Display.V1.FormattedValue']}`,
                         'order_code_trimmed': clean_white_space(`${uom_request.crcfc_requestcode}-${uom_order['_prg_vendorcode_value@OData.Community.Display.V1.FormattedValue']}`.trim().toLowerCase()),
                         'order_uid': uom_order.prg_uomprocurementorderid,
@@ -804,31 +885,30 @@ function render_body_content(){
                         'is_beyond_approved': APPROVED_ORDER_STATUS_CODES.includes(uom_order['prg_orderstatus']) && is_request_createdon_within_one_month,
                         'allow_ticket_raised': ELIGIBLE_TICKET_STATUS_CODES.includes(uom_order['prg_orderstatus']) && is_request_createdon_within_one_month,
                         'week_of_year_str': date_to_week_str(uom_order.createdon),
-                    };
+                    });
                     assign_ordered_product_info(format_obj_prg_key(extract_sub_object({...uom_order}, 'ordered_product.')), formatted_uom_order);
-                    _finalise_request(true);
                 }
 
                 $.ajax({
                     type: 'POST',
-                    url: 'https://prod-12.australiasoutheast.logic.azure.com:443/workflows/bbfaafb06d9e49e3ae637509aa3cf6a7/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=x0w-BX1hGK46OMvEez2FFhSXb9QEcR33PzVR9Gz519U',
+                    url: 'https://prod-09.australiasoutheast.logic.azure.com:443/workflows/fdc20164ab3f4b4cbc5f0b053e0ed067/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=qnQxVXYKP7rBunbfDaGRqKor-xltaYEo0LUIcFSHDSA',
                     contentType: 'application/json',
                     accept: 'application/json;odata=verbose',
                     async: true,
                     timeout: AJAX_TIMEOUT_DURATION,
-                    data: JSON.stringify({'request_uid': uom_request['crcfc_uomprocurementorderrequestid']}),
+                    data: JSON.stringify({'request_uid': uom_request['crcfc_uomprocurementorderrequestid'],'filtered_vendor_xml_query': filtered_vendor_xml_query, 'filtered_order_status_xml_query': filtered_order_status_xml_query, 'filtered_payment_status_xml_query': filtered_payment_status_xml_query, 'filtered_brand_xml_query': filtered_brand_xml_query, 'createdon_xml_filter_query': createdon_xml_filter_query, 'filtered_category_xml_query': filtered_category_xml_query, 'filtered_subcategory_xml_query': filtered_subcategory_xml_query,
+                                                                'filtered_product_name_xml_query': filtered_product_name_xml_query, 'filtered_vendor_code_xml_query': filtered_vendor_code_xml_query, 'filtered_order_code_xml_query': filtered_order_code_xml_query}),
                     complete: function(response, status, xhr){
-                        if (String(status) !== 'success') return _finalise_request(false);
-                        const uom_orders = response['responseJSON'];
-                        if (uom_orders.length < 1) return _finalise_request(false);
-                        uom_orders.forEach(uom_order => {
+                        _finalise_request(true);
+                    },
+                    success: function(response, status, xhr){
+                        response.orders.forEach(uom_order => {
                             format_uom_order(uom_order);
                         });
                     }
                 });
             }
-
-            render_loading_progress_bar(0);
+            
             uom_requests.forEach(uom_request => {
                 (function(y) {
                     setTimeout(function() {
@@ -836,9 +916,15 @@ function render_body_content(){
                         }, y * 80);
                     }(idx));
             });
-            
+        },
+        error: function(response, status, xhr){
+            if (QUERY_INITIAL_DATA) return window.location = `${window.location.origin}/No-Data/`;
         },
     });
+}
+
+function render_body_content(){
+    query_uom_requests_and_orders(true);
 }
 
 
@@ -847,9 +933,8 @@ function render_chart_js_content(no_filter=true){
     $('section[name=order-stat-container-section]').find('.removable-item').each(function(){
         $(this).remove();
     });
-
+    week_of_yr_data = [];
     const filtered_vendors = get_selected_filter_values(`${VENDOR_FILTER_DROPDOWN.attr('name')}-checkbox`);
-    const filtered_products = get_selected_filter_values(`${PRODUCT_FILTER_DROPDOWN.attr('name')}-checkbox`);
     const filtered_categories = get_selected_filter_values(`${CATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
     const filtered_subcategories = get_selected_filter_values(`${SUBCATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
     const filtered_brands = get_selected_filter_values(`${BRAND_FILTER_DROPDOWN.attr('name')}-checkbox`);
@@ -857,12 +942,12 @@ function render_chart_js_content(no_filter=true){
     const filtered_order_opts = get_selected_filter_values(`${ORDER_STATUS_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
     let {min_date, max_date} = get_daterange_input_val(ORDER_DATE_FILTER_DROPDOWN);
     const filtered_week_of_year_arr = get_weeks_in_range(min_date, max_date);
+    [...filtered_week_of_year_arr].sort((a, b) => a.localeCompare(b)).forEach(filtered_week_of_year => week_of_yr_data.push({label: filtered_week_of_year, value: filtered_week_of_year}));
     const searched_txt = !$('input[name=product-search-input-field]').val() || is_whitespace($('input[name=product-search-input-field]').val()) ? '' : clean_white_space($('input[name=product-search-input-field]').val().toLowerCase().trim());
 
-    const filtered_uom_orders = no_filter ? FORMATTED_UOM_ORDERS : FORMATTED_UOM_ORDERS.filter(uom_order => 
+    const filtered_uom_orders = no_filter ? [...FORMATTED_UOM_ORDERS] : [...FORMATTED_UOM_ORDERS].filter(uom_order => 
         (uom_order.trimmed_product_name.includes(searched_txt) || uom_order.order_code_trimmed.includes(searched_txt)) &&
         filtered_subcategories.includes(uom_order.subcategory_uid) && filtered_categories.includes(uom_order.category_uid) &&
-        filtered_products.includes(uom_order.product_uid) &&
         filtered_vendors.includes(uom_order.vendor_uid) &&
         filtered_brands.includes(String(uom_order.brand_code)) &&
         filtered_payment_opts.includes(uom_order.payment_status_code) &&
@@ -1254,38 +1339,9 @@ function get_selected_filter_values(checkbox_name, to_int=false){
     return selected_values;
 }
 
-function sort_order_history_items(sort_radio_dom, formatted_uom_orders, render_table=false){
-    const _this_id = sort_radio_dom.attr('id');
-    const _data_row = $(`tr[name=${ORDER_HISTORY_TABLE.attr('name')}-row]`);
-    if (formatted_uom_orders.length < 1) return;
-
-    if (_this_id == 'sort-by-product-name-asc'){
-        formatted_uom_orders = formatted_uom_orders.sort((a, b) => a.product_name.localeCompare(b.product_name));
-    }else if (_this_id == 'sort-by-product-name-desc'){
-        formatted_uom_orders = formatted_uom_orders.sort((a, b) => b.product_name.localeCompare(a.product_name));
-    }else if(_this_id == 'sort-by-price-asc'){
-        formatted_uom_orders = formatted_uom_orders.sort((a, b) => parseFloat(a.est_price) - parseFloat(b.est_price));
-    }else if(_this_id == 'sort-by-price-desc'){
-        formatted_uom_orders = formatted_uom_orders.sort((a, b) => parseFloat(b.est_price) - parseFloat(a.est_price));
-    }else if(_this_id == 'sort-by-quantity-asc'){
-        formatted_uom_orders = formatted_uom_orders.sort((a, b) => parseInt(a.stock_ordered) - parseInt(b.stock_ordered));
-    }else if(_this_id == 'sort-by-quantity-desc'){
-        formatted_uom_orders = formatted_uom_orders.sort((a, b) => parseInt(b.stock_ordered) - parseInt(a.stock_ordered));
-    }else if(_this_id == 'sort-by-createdon-desc'){
-        formatted_uom_orders = formatted_uom_orders.sort((a, b) => new Date(b.createdon) - new Date(a.createdon));
-    }else if(_this_id == 'sort-by-createdon-asc'){
-        formatted_uom_orders = formatted_uom_orders.sort((a, b) => new Date(a.createdon) - new Date(b.createdon));
-    }else if (_this_id == 'sort-by-product-code-asc') {
-        formatted_uom_orders = formatted_uom_orders.sort((a, b) => a.vendor_map_code.localeCompare(b.vendor_map_code));
-    }else if (_this_id == 'sort-by-product-code-desc') {
-        formatted_uom_orders = formatted_uom_orders.sort((a, b) => b.vendor_map_code.localeCompare(a.vendor_map_code));
-    }
-    if (render_table){
-        _data_row.each(function(){
-            $(this).remove();
-        });
-        render_order_history_data_row(_this_id == 'sort-by-createdon-desc', formatted_uom_orders);
-    }
+function get_sort_query(){
+    const chosen_sort_radio = $('input[name=sort-option-radio-checkbox]:checked').length < 1 ? $('input[name=sort-option-radio-checkbox][data-attr="createdon"][data-desc="1"]') : $('input[name=sort-option-radio-checkbox]:checked');
+    return `<order attribute="${chosen_sort_radio.attr('data-attr')}" descending="${chosen_sort_radio.attr('data-desc') === '1'}"/>`
 }
 
 // Order detail changes function
@@ -1342,57 +1398,43 @@ $(document).ready(function(){
         disable_button(CLEAR_FILTER_BTN, APPLY_FILTER_BTN.prop('disabled'));
     });
 
-    APPLY_FILTER_BTN.on('click', function(event){
+    function refresh_filtered_contents(){
+        ORDER_HISTORY_TABLE.find('tbody').eq(0).empty();
+        FORMATTED_UOM_ORDERS = [];
+        PAGE_NUM = 1;
+        disable_filter_elements(true, $('div[name=mass-order-status-selection-opt-container]'));
+        render_chart_js_content();
+    }
+
+    $(document).on('click', '.init-resource-query-btn', function(event){
+        const this_btn = $(this);
+        const is_loadmore = this_btn.attr('name') === LOAD_MORE_ORDERS_BTN.attr('name');
+        if (!is_loadmore) refresh_filtered_contents();
         disable_button(CLEAR_FILTER_BTN, true);
-        disable_button(APPLY_FILTER_BTN, true, BSTR_BORDER_SPINNER);
-
-        const filtered_vendors = get_selected_filter_values(`${VENDOR_FILTER_DROPDOWN.attr('name')}-checkbox`);
-        const filtered_products = get_selected_filter_values(`${PRODUCT_FILTER_DROPDOWN.attr('name')}-checkbox`);
-        const filtered_categories = get_selected_filter_values(`${CATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
-        const filtered_subcategories = get_selected_filter_values(`${SUBCATEGORY_FILTER_DROPDOWN.attr('name')}-checkbox`);
-        const filtered_brands = get_selected_filter_values(`${BRAND_FILTER_DROPDOWN.attr('name')}-checkbox`);
-        const filtered_payment_opts = get_selected_filter_values(`${PAYMENT_STATUS_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
-        const filtered_order_opts = get_selected_filter_values(`${ORDER_STATUS_FILTER_DROPDOWN.attr('name')}-checkbox`, true);
-
-        const searched_txt = !$('input[name=product-search-input-field]').val() || is_whitespace($('input[name=product-search-input-field]').val()) ? '' : clean_white_space($('input[name=product-search-input-field]').val().toLowerCase().trim());
-        let {min_date, max_date} = get_daterange_input_val(ORDER_DATE_FILTER_DROPDOWN);
-        sort_order_history_items($('input[name=sort-option-radio-checkbox]:checked'), 
-                                    [...FORMATTED_UOM_ORDERS].filter(formatted_uom_order => 
-                                        (formatted_uom_order.trimmed_product_name.includes(searched_txt) || formatted_uom_order.order_code_trimmed.includes(searched_txt)) &&
-                                        filtered_vendors.includes(formatted_uom_order.vendor_uid) &&
-                                        filtered_categories.includes(formatted_uom_order.category_uid) &&
-                                        filtered_subcategories.includes(formatted_uom_order.subcategory_uid) &&
-                                        filtered_products.includes(formatted_uom_order.product_uid) &&
-                                        filtered_brands.includes(String(formatted_uom_order.brand_code)) &&
-                                        filtered_payment_opts.includes(formatted_uom_order.payment_status_code) &&
-                                        filtered_order_opts.includes(formatted_uom_order.order_status_code) &&
-                                        is_within_datetime_range(formatted_uom_order.createdon, min_date, max_date)
-                                    ), 
-                                    true);
-
-        render_chart_js_content(false);
-        disable_button(CLEAR_FILTER_BTN, false);
-        disable_button(APPLY_FILTER_BTN, true, 'Apply Filters');
+        disable_button($('.init-resource-query-btn'), true);
+        disable_button(this_btn, true, BSTR_BORDER_SPINNER);
+        query_uom_requests_and_orders();
     });
 
 
     CLEAR_FILTER_BTN.on('click', function(event){
         disable_button(CLEAR_FILTER_BTN, true, BSTR_BORDER_SPINNER);
         disable_button(APPLY_FILTER_BTN, true);
-
-        ORDER_HISTORY_TABLE.find('.data-row').each(function(){
-            $(this).toggle(true);
-        });
-        sort_order_history_items($('#sort-by-createdon-desc'), FORMATTED_UOM_ORDERS, true);
         render_chart_js_content();
 
-        $('input[name=product-search-input-field]').val(null);
+        $(document).find('.content-section.search-and-filter-section').find('div[name=search-filter-container]').find('.search-text-field.filter-search-text-field').val(null);
         $(document).find('.form-check-input').prop('checked', false);
         $(document).find('.form-check-input').attr('checked', false);
         ORDER_DATE_FILTER_DROPDOWN.val(`${parse_dt_str_and_obj(new Date(ORDER_DATE_FILTER_DROPDOWN.attr('min')), true)} - ${parse_dt_str_and_obj(new Date(ORDER_DATE_FILTER_DROPDOWN.attr('max')), true)}`);
-
-        $('#sort-by-createdon-desc').prop('checked', true);
+        $('input[name=sort-option-radio-checkbox][data-attr="createdon"][data-desc="1"]').prop('checked', true);
         disable_button(CLEAR_FILTER_BTN, true, 'Clear Filters');
+        disable_button(LOAD_MORE_ORDERS_BTN, true, 'Load More');
+        disable_button(APPLY_FILTER_BTN, false, 'Apply Filters');
+        disable_button(APPLY_ORDER_INFO_CHANGES_BTN, true);
+
+        toggle_content_elements(false);
+        disable_page_filters(true);
+        refresh_filtered_contents();
     });
 
     ORDER_DATE_FILTER_DROPDOWN.daterangepicker({
@@ -1717,7 +1759,7 @@ $(document).ready(function(){
 
     APPLY_ORDER_INFO_CHANGES_BTN.on('click', function(event){
         let progress = 0;
-        const disabled_elements = $(`.form-check-input, .filter-opt-radio, div[name=mass-order-status-selection-opt-container], .product-quantity-input-field, .integer-input, .opt-selection-btn, .search-and-filter-section, div[name=product-info-btn], .image-container, span[name=${OPEN_INVOICE_UPLOAD_BTN.attr('name')}]`);
+        const disabled_elements = $(`.form-check-input, .filter-opt-radio, div[name=mass-order-status-selection-opt-container], .product-quantity-input-field, .integer-input, .opt-selection-btn, .search-and-filter-section, div[name=product-info-btn], .image-container, span[name=${OPEN_INVOICE_UPLOAD_BTN.attr('name')}], button[name=${CLEAR_FILTER_BTN.attr('name')}]`);
         disable_filter_elements(true, disabled_elements);
         disable_button(APPLY_ORDER_INFO_CHANGES_BTN, true, BSTR_BORDER_SPINNER);
 

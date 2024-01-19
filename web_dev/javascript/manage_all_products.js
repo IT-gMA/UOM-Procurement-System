@@ -316,7 +316,7 @@ function get_xml_filter_queries(){
     <condition attribute="prg_category" operator="in">${filtered_category_opts.map(data => `<value>${data}</value>`).join('\n')}</condition>`;
     const filtered_subcategory_xml_query = `
     <condition attribute="prg_subcategory" operator="in">${filtered_subcategory_opts.map(data => `<value>${data}</value>`).join('\n')}</condition>`;
-    const filtered_product_name_xml_query = `<condition attribute="prg_name_trimmed" operator="like" value="%${clean_white_space(searched_products.trim().toLowerCase())}%" />`;
+    const filtered_product_name_xml_query = `<condition attribute="prg_name_trimmed" operator="like" value="%${clean_white_space(escape_xml_string(searched_products).trim().toLowerCase())}%" />`;
 
     const filtered_brand_xml_query = filtered_brand_opts.includes(null) ? `
     <filter type="or">
@@ -372,7 +372,7 @@ function _format_vendor_stock_remained(stock_on_hand, stock_ordered){
 function format_json_product(json_product, for_insert=false){
     const default_category = CATEGORIES[0];
     const default_order_unit = ORDER_UNIT_CHOICES[0];
-    return {
+    return sanitise_json_obj({
         'product_uid': for_insert ? 'new-product1' : json_product.prg_uomprocurementserviceproductsid,
         'product_barcode': for_insert ? '' : is_json_data_empty(json_product.prg_unitbarcodes) ? '' : json_product.prg_unitbarcodes,
         'product_name': for_insert ? '' : json_product.prg_name,
@@ -400,7 +400,7 @@ function format_json_product(json_product, for_insert=false){
         'bulk_order_unit_code': is_json_data_empty(json_product.prg_bulkorder) || for_insert ? -1 : json_product.prg_bulkorder,
         'bulk_order_unit_name': is_json_data_empty(json_product.prg_bulkorder) || for_insert ? 'None' : json_product['prg_bulkorder@OData.Community.Display.V1.FormattedValue'],
         'is_active': for_insert ? true : json_product.statecode === 0,
-    };
+    });
 }
 
 function remove_input_red_color(input_dom){
@@ -535,8 +535,8 @@ function render_filter_options(dropdown_container, filter_opts, sort_by_label=fa
     filter_opts.forEach(filter_opt => {
         dropdown_container.append(`
         <div class='dropdown-item  order-attr-filter-opt-container'>
-            <input class='form-check-input filter-opt-radio' type='checkbox' name='${dropdown_container.attr('name')}-checkbox' data-label='${filter_opt.label}' data-value='${filter_opt.value}' data-parentul='${dropdown_container.attr('name')}'>
-            <label class='form-check-label'>${filter_opt.label}</label>
+            <input class='form-check-input filter-opt-radio' type='checkbox' name='${dropdown_container.attr('name')}-checkbox' data-label='${DOMPurify.sanitize(filter_opt.label)}' data-value='${filter_opt.value}' data-parentul='${dropdown_container.attr('name')}'>
+            <label class='form-check-label'>${DOMPurify.sanitize(filter_opt.label)}</label>
         </div>
         `);
     });
@@ -547,8 +547,8 @@ function make_choice_selection_radio_dropdown(target_choices, default_choice_lab
                 <a class='nav-link' role='button' data-bs-toggle='dropdown' aria-expanded='false'>${default_choice_label}</a>
                     <ul class='dropdown-menu dropdown-menu-end' aria-labelledby='navbarDropdown' onclick='event.stopPropagation()' style='overflow: scroll; max-height: 20em;'>
                         ${target_choices.map((data, i) => `<div class='dropdown-item' name='${container_name}-checkbox-container'>
-                                                                <input class='form-check-input filter-opt-radio attr-selection-opt-radio-checkbox' type='radio' data-value='${data.value}' data-label='${data.label}' name='${item_uid}-${container_name}-checkbox'${default_choice_value === data.value ? ' checked' : ''}>
-                                                                <label class='form-check-label'>${data.label}</label>
+                                                                <input class='form-check-input filter-opt-radio attr-selection-opt-radio-checkbox' type='radio' data-value='${data.value}' data-label='${DOMPurify.sanitize(data.label)}' name='${item_uid}-${container_name}-checkbox'${default_choice_value === data.value ? ' checked' : ''}>
+                                                                <label class='form-check-label'>${DOMPurify.sanitize(data.label)}</label>
                                                             </div> `).join('\n')}</ul></div>`;
 }
 
@@ -609,15 +609,15 @@ function render_body_content(){
             
         }, success: function(response, status, xhr){
             BRANDS.push({'label': 'No Brand', 'value': -1})
-            response.brands.forEach(brand => {
+            sanitise_json_obj(response.brands).forEach(brand => {
                 BRANDS.push({'label': brand.prg_name, 'value': brand.prg_ggorderbrandid});
             });
 
-            response.sub_categories.forEach(sub_category => {
+            sanitise_json_obj(response.sub_categories).forEach(sub_category => {
                 SUB_CATEGORIES.push({'label': sub_category.prg_name, 'value': sub_category.prg_uomprocurementservicesubcatgeoryid});
             });
 
-            response.categories.forEach(category => {
+            sanitise_json_obj(response.categories).forEach(category => {
                 CATEGORIES.push({'label': category.prg_name, 'value': category.prg_uomprocurementservicecategoriesid});
             });
             render_filter_options(BRAND_FILTER_DROPDOWN, BRANDS);
@@ -709,7 +709,7 @@ $(document).ready(function(){
         preview_product_content.order_unit_name = parent_tr.find('div[name=order-unit-choice-selection]').find('.nav-link').text();
         preview_product_content.order_size_desc_txt = is_whitespace(preview_product_content.product_size) ? `${preview_product_content.unit_size} - ${preview_product_content.order_unit_name}` : `${preview_product_content.product_size} - ${preview_product_content.unit_size} - ${preview_product_content.order_unit_name}`;
         
-        render_product_card_preview(preview_product_content, PRODUCT_CARD_PREVIEW_MODAL.find('.modal-dialog'));
+        render_product_card_preview(sanitise_json_obj(preview_product_content), PRODUCT_CARD_PREVIEW_MODAL.find('.modal-dialog'));
         PRODUCT_CARD_PREVIEW_MODAL.modal('show');
     });
 

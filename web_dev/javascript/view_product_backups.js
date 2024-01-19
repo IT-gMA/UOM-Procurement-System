@@ -354,7 +354,7 @@ function format_product_vendor_map(product, vendor_product_map, cart_item=undefi
         formatted_product['num_in_cart'] = cart_item.prg_stockordered;
         formatted_product['total_price'] = cart_item.prg_stockordered * formatted_product['price'];
     }
-    return formatted_product;
+    return sanitise_json_obj(formatted_product);
 }
 
 function get_product_info_markup(info_name, info_content, is_last=false){
@@ -377,8 +377,8 @@ function render_filter_options(dropdown_container, filter_opts, sort_by_label=fa
         dropdown_container.append(`
         <div class='dropdown-item'>
             <input class='form-check-input filter-opt-radio' type='checkbox' name='${dropdown_container.attr('name')}-checkbox'
-                    data-label='${filter_opt.label}' data-value='${filter_opt.value}' data-parentul='${dropdown_container.attr('name')}'>
-            <label class='form-check-label'>${filter_opt.label}</label>
+                    data-label='${DOMPurify.sanitize(filter_opt.label)}' data-value='${filter_opt.value}' data-parentul='${dropdown_container.attr('name')}'>
+            <label class='form-check-label'>${DOMPurify.sanitize(filter_opt.label)}</label>
         </div>
         `);
     });
@@ -435,9 +435,9 @@ function render_body_content(category_uid){
                         if (vendor_filter_options.length < 0 || !vendor_filter_options.map(item => item.value).includes(formatted_product.vendor_uid)) vendor_filter_options.push({'value': formatted_product.vendor_uid, 'label': formatted_product.vendor_name});
                     });
 
-                    render_filter_options(BRAND_FILTER_DROPDOWN, brand_filter_options);
-                    render_filter_options(SUBCATEGORY_FILTER_DROPDOWN, subcategory_filter_options);
-                    render_filter_options(VENDOR_FILTER_DROPDOWN, vendor_filter_options);
+                    render_filter_options(BRAND_FILTER_DROPDOWN, sanitise_json_obj(brand_filter_options));
+                    render_filter_options(SUBCATEGORY_FILTER_DROPDOWN, sanitise_json_obj(subcategory_filter_options));
+                    render_filter_options(VENDOR_FILTER_DROPDOWN, sanitise_json_obj(vendor_filter_options));
 
                     render_product_cards(formatted_products, PRODUCT_CONTAINER_SECTION, false);
                     hide_elems_on_load(true);
